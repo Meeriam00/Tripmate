@@ -1,17 +1,5 @@
-import {
-  forwardRef,
-  useEffect,
-  useId,
-  useRef,
-  type ButtonHTMLAttributes,
-  type InputHTMLAttributes,
-  type ReactNode,
-  type SelectHTMLAttributes,
-} from "react";
-import { LuChevronDown, LuX } from "react-icons/lu";
-import { avatarColor, initials } from "../lib/avatars";
-import { formatMoney } from "../lib/money";
-import type { Participant } from "../lib/types";
+import { forwardRef, useEffect, useId, useRef, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode } from "react";
+import { LuX } from "react-icons/lu";
 
 export function cx(...c: (string | false | null | undefined)[]) {
   return c.filter(Boolean).join(" ");
@@ -19,43 +7,34 @@ export function cx(...c: (string | false | null | undefined)[]) {
 
 /* ---------------------------------------------------------------- Buttons */
 
-type Variant = "primary" | "signal" | "secondary" | "ghost" | "danger" | "quiet";
-type Size = "sm" | "md" | "lg";
+type Variant = "sun" | "dark" | "soft" | "ghost" | "danger";
 
 const VARIANTS: Record<Variant, string> = {
-  primary: "bg-forest text-paper hover:bg-forest-3 active:bg-forest-2 shadow-btn",
-  signal: "bg-signal text-forest-2 hover:bg-signal-2 active:brightness-95 shadow-btn",
-  secondary: "bg-card text-ink ring-1 ring-line ring-inset hover:bg-paper-2/60 hover:ring-ink/25 active:bg-paper-2",
-  ghost: "text-ink hover:bg-ink/[0.06] active:bg-ink/10",
-  quiet: "text-ink-2 hover:text-ink hover:bg-ink/[0.05]",
-  danger: "bg-owe text-white hover:brightness-110 active:brightness-95 shadow-btn",
-};
-const SIZES: Record<Size, string> = {
-  sm: "h-8 px-3 text-[0.82rem] gap-1.5 rounded-lg",
-  md: "h-10 px-4 text-[0.9rem] gap-2 rounded-[0.6rem]",
-  lg: "h-12 px-6 text-base gap-2.5 rounded-xl",
+  sun: "bg-sun text-ink hover:bg-sun-2 active:bg-sun-2",
+  dark: "bg-ink text-white hover:bg-black",
+  soft: "bg-mist text-ink hover:bg-line",
+  ghost: "text-ink-2 hover:bg-mist hover:text-ink",
+  danger: "bg-owe text-white hover:brightness-110",
 };
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: Variant;
-  size?: Size;
+  size?: "md" | "lg";
   icon?: ReactNode;
 }
 
+const base =
+  "inline-flex items-center justify-center gap-2 rounded-full font-semibold whitespace-nowrap transition-colors duration-150 select-none active:scale-[0.98] disabled:pointer-events-none disabled:opacity-40";
+
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
-  { variant = "secondary", size = "md", icon, className, children, type = "button", ...rest },
+  { variant = "sun", size = "md", icon, className, children, type = "button", ...rest },
   ref,
 ) {
   return (
     <button
       ref={ref}
       type={type}
-      className={cx(
-        "inline-flex shrink-0 items-center justify-center font-semibold whitespace-nowrap transition-[background-color,box-shadow,color,transform] duration-150 select-none active:translate-y-px disabled:pointer-events-none disabled:opacity-45",
-        VARIANTS[variant],
-        SIZES[size],
-        className,
-      )}
+      className={cx(base, VARIANTS[variant], size === "lg" ? "h-14 px-7 text-[1rem]" : "h-11 px-5 text-[0.92rem]", className)}
       {...rest}
     >
       {icon}
@@ -66,41 +45,35 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
 
 export function LinkButton({
   href,
-  variant = "secondary",
+  variant = "sun",
   size = "md",
   icon,
   className,
   children,
-}: { href: string; variant?: Variant; size?: Size; icon?: ReactNode; className?: string; children: ReactNode }) {
+}: {
+  href: string;
+  variant?: Variant;
+  size?: "md" | "lg";
+  icon?: ReactNode;
+  className?: string;
+  children: ReactNode;
+}) {
   return (
-    <a
-      href={href}
-      className={cx(
-        "inline-flex shrink-0 items-center justify-center font-semibold whitespace-nowrap transition-[background-color,box-shadow,color,transform] duration-150 active:translate-y-px",
-        VARIANTS[variant],
-        SIZES[size],
-        className,
-      )}
-    >
+    <a href={href} className={cx(base, VARIANTS[variant], size === "lg" ? "h-14 px-7 text-[1rem]" : "h-11 px-5 text-[0.92rem]", className)}>
       {icon}
       {children}
     </a>
   );
 }
 
-export function IconButton({
-  label,
-  children,
-  className,
-  ...rest
-}: ButtonHTMLAttributes<HTMLButtonElement> & { label: string }) {
+export function IconButton({ label, children, className, ...rest }: ButtonHTMLAttributes<HTMLButtonElement> & { label: string }) {
   return (
     <button
       type="button"
       aria-label={label}
       title={label}
       className={cx(
-        "inline-flex size-9 shrink-0 items-center justify-center rounded-lg text-ink-2 transition-colors hover:bg-ink/[0.06] hover:text-ink active:bg-ink/10 disabled:opacity-40",
+        "inline-flex size-10 shrink-0 items-center justify-center rounded-full text-ink transition-colors hover:bg-ink/[0.06] disabled:opacity-30",
         className,
       )}
       {...rest}
@@ -110,102 +83,63 @@ export function IconButton({
   );
 }
 
-/* ---------------------------------------------------------------- Avatars */
+/* ---------------------------------------------------------------- Tiles */
 
-export function Avatar({
-  person,
-  size = 32,
-  ring = false,
-  className,
-}: {
-  person: Pick<Participant, "name" | "color">;
-  size?: number;
-  ring?: boolean;
-  className?: string;
-}) {
-  const c = avatarColor(person.color);
+/** The reference's icon tile: rounded square, soft orange rim, cream fill. */
+export function Tile({ children, size = 44, className }: { children: ReactNode; size?: number; className?: string }) {
   return (
     <span
       aria-hidden
       className={cx(
-        "inline-flex shrink-0 items-center justify-center rounded-full font-semibold tracking-[-0.01em] select-none",
-        ring && "ring-2 ring-card",
+        "inline-flex shrink-0 items-center justify-center rounded-[14px] border-2 border-sun-soft bg-cream-2 font-semibold text-ink",
         className,
       )}
-      style={{ width: size, height: size, background: c.bg, color: c.fg, fontSize: Math.round(size * 0.38) }}
+      style={{ width: size, height: size, fontSize: Math.round(size * 0.34) }}
     >
-      {initials(person.name)}
+      {children}
     </span>
   );
 }
 
-export function AvatarStack({ people, size = 28, max = 6 }: { people: Participant[]; size?: number; max?: number }) {
-  const shown = people.slice(0, max);
-  const rest = people.length - shown.length;
-  return (
-    <span className="inline-flex items-center" aria-label={people.map((p) => p.name).join(", ")}>
-      {shown.map((p, i) => (
-        <Avatar key={p.id} person={p} size={size} ring className={i ? "-ml-1.5" : ""} />
-      ))}
-      {rest > 0 && (
-        <span
-          className="-ml-2 inline-flex items-center justify-center rounded-full bg-paper-2 text-[0.7rem] font-semibold text-ink-2 ring-2 ring-card"
-          style={{ width: size, height: size }}
-        >
-          +{rest}
-        </span>
-      )}
-    </span>
-  );
+export function initials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (!parts.length) return "?";
+  if (parts.length === 1) return parts[0].slice(0, 1).toLocaleUpperCase("az") + parts[0].slice(1, 2).toLocaleLowerCase("az");
+  return (parts[0][0] + parts[parts.length - 1][0]).toLocaleUpperCase("az");
 }
 
-/* ---------------------------------------------------------------- Money */
-
-export function Money({
-  value,
-  currency,
-  signed,
-  tone,
-  className,
-}: {
-  value: number;
-  currency: string;
-  signed?: boolean;
-  tone?: "auto" | "none";
-  className?: string;
-}) {
-  const color = tone === "auto" ? (value > 0 ? "text-gain" : value < 0 ? "text-owe" : "text-ink-3") : "";
-  return <span className={cx("tabular", color, className)}>{formatMoney(value, currency, { signed })}</span>;
+export function PersonTile({ name, size = 44 }: { name: string; size?: number }) {
+  return <Tile size={size}>{initials(name)}</Tile>;
 }
 
 /* ---------------------------------------------------------------- Forms */
 
 export function Field({
   label,
-  hint,
-  error,
-  children,
   htmlFor,
-  className,
+  error,
+  hint,
   optional,
+  children,
+  className,
 }: {
   label: string;
-  hint?: ReactNode;
-  error?: string | null;
-  children: ReactNode;
   htmlFor?: string;
-  className?: string;
+  error?: string | null;
+  hint?: ReactNode;
   optional?: boolean;
+  children: ReactNode;
+  className?: string;
 }) {
   return (
-    <div className={cx("flex flex-col gap-1.5", className)}>
-      <label htmlFor={htmlFor} className="text-[0.84rem] font-semibold text-ink">
+    <div className={cx("flex flex-col gap-2", className)}>
+      <label htmlFor={htmlFor} className="text-[0.86rem] font-semibold text-ink">
         {label}
-        {optional && <span className="ml-1.5 font-normal text-ink-3">optional</span>}
+        {optional && <span className="ml-1.5 font-normal text-ink-3">(istəyə bağlı)</span>}
       </label>
       {children}
       {error ? (
-        <p className="text-[0.8rem] font-medium text-owe" role="alert">
+        <p role="alert" className="text-[0.8rem] font-medium text-owe">
           {error}
         </p>
       ) : hint ? (
@@ -215,102 +149,74 @@ export function Field({
   );
 }
 
-export const inputBase =
-  "h-11 rounded-[0.6rem] bg-card px-3.5 text-[0.95rem] text-ink ring-1 ring-line ring-inset placeholder:text-ink-3 transition-shadow hover:ring-ink/25 focus:ring-2 focus:ring-forest focus:outline-none aria-[invalid=true]:ring-owe";
+export const inputClass =
+  "h-12 w-full rounded-2xl border border-line bg-white px-4 text-[0.95rem] text-ink placeholder:text-ink-3 transition-colors hover:border-ink-3/60 focus:border-sun focus:ring-4 focus:ring-sun/25 focus:outline-none aria-[invalid=true]:border-owe";
 
 export const TextInput = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement> & { invalid?: boolean }>(
   function TextInput({ className, invalid, ...rest }, ref) {
-    return <input ref={ref} aria-invalid={invalid || undefined} className={cx(inputBase, "w-full", className)} {...rest} />;
+    return <input ref={ref} aria-invalid={invalid || undefined} className={cx(inputClass, className)} {...rest} />;
   },
 );
 
-export function Select({ className, children, ...rest }: SelectHTMLAttributes<HTMLSelectElement>) {
+/** A pill toggle used for "who paid" (radio) and "who took part" (checkbox). */
+export function Chip({
+  selected,
+  onClick,
+  children,
+  role,
+}: {
+  selected: boolean;
+  onClick: () => void;
+  children: ReactNode;
+  role: "radio" | "checkbox";
+}) {
   return (
-    <div className={cx("relative", className)}>
-      <select className={cx(inputBase, "w-full appearance-none pr-9")} {...rest}>
-        {children}
-      </select>
-      <LuChevronDown aria-hidden className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-ink-3" />
-    </div>
+    <button
+      type="button"
+      role={role}
+      aria-checked={selected}
+      onClick={onClick}
+      className={cx(
+        "inline-flex h-11 items-center gap-2 rounded-full border-2 px-4 text-[0.9rem] font-medium transition-colors",
+        selected ? "border-sun bg-sun text-ink" : "border-line bg-white text-ink-2 hover:border-sun-soft hover:text-ink",
+      )}
+    >
+      {children}
+    </button>
   );
 }
 
-export function Segmented<T extends string>({
-  value,
-  onChange,
-  options,
-  label,
-  size = "md",
-}: {
-  value: T;
-  onChange: (v: T) => void;
-  options: { value: T; label: string }[];
-  label: string;
-  size?: "sm" | "md";
-}) {
+/* ---------------------------------------------------------------- Section header */
+
+/** Mirrors the reference's date row: label left, small figure right, orange rule below. */
+export function SectionHead({ title, aside, id }: { title: string; aside?: ReactNode; id?: string }) {
   return (
-    <div role="radiogroup" aria-label={label} className="inline-flex rounded-[0.7rem] bg-paper-2 p-1">
-      {options.map((o) => {
-        const on = o.value === value;
-        return (
-          <button
-            key={o.value}
-            type="button"
-            role="radio"
-            aria-checked={on}
-            onClick={() => onChange(o.value)}
-            onKeyDown={(e) => {
-              if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
-              e.preventDefault();
-              const i = options.findIndex((x) => x.value === value);
-              const next = options[(i + (e.key === "ArrowRight" ? 1 : options.length - 1)) % options.length];
-              onChange(next.value);
-              (e.currentTarget.parentElement?.querySelectorAll("button")[options.indexOf(next)] as HTMLElement)?.focus();
-            }}
-            tabIndex={on ? 0 : -1}
-            className={cx(
-              "rounded-lg font-semibold transition-all duration-150",
-              size === "sm" ? "px-2.5 py-1 text-[0.8rem]" : "px-3.5 py-1.5 text-[0.86rem]",
-              on ? "bg-card text-ink shadow-[0_1px_2px_rgba(23,36,30,.12)]" : "text-ink-2 hover:text-ink",
-            )}
-          >
-            {o.label}
-          </button>
-        );
-      })}
+    <div className="flex items-baseline justify-between gap-4 border-b-2 border-sun px-5 pt-5 pb-3 sm:px-7">
+      <h2 id={id} className="text-[1rem] font-semibold text-ink">
+        {title}
+      </h2>
+      {aside && <span className="text-[0.8rem] font-medium text-ink-2">{aside}</span>}
     </div>
   );
 }
 
 /* ---------------------------------------------------------------- Dialogs */
 
-/**
- * Modal built on the native <dialog> element: real focus trapping, Esc to
- * close and an inert page behind it for free. "drawer" slides in from the
- * right on desktop and becomes a bottom sheet on phones.
- */
 export function Dialog({
   open,
   onClose,
   title,
-  description,
   children,
   footer,
-  variant = "center",
-  labelledBy,
 }: {
   open: boolean;
   onClose: () => void;
   title: ReactNode;
-  description?: ReactNode;
   children?: ReactNode;
   footer?: ReactNode;
-  variant?: "center" | "drawer";
-  labelledBy?: string;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
-  const autoId = useId();
-  const titleId = labelledBy ?? autoId;
+  const titleId = useId();
   useEffect(() => {
     const d = ref.current;
     if (!d) return;
@@ -329,6 +235,7 @@ export function Dialog({
     <dialog
       ref={ref}
       aria-labelledby={titleId}
+      className="tm-dialog"
       onCancel={(e) => {
         e.preventDefault();
         onClose();
@@ -336,24 +243,21 @@ export function Dialog({
       onMouseDown={(e) => {
         if (e.target === ref.current) onClose();
       }}
-      className={cx("tm-dialog", variant === "drawer" ? "tm-drawer" : "tm-center")}
     >
       {open && (
-        <div className="flex max-h-full min-h-0 flex-col">
-          <header className="flex items-start gap-4 px-5 pt-5 pb-3 sm:px-7 sm:pt-6">
-            <div className="min-w-0 flex-1">
-              <h2 id={titleId} className="font-display text-[1.6rem] leading-tight font-medium text-ink">
-                {title}
-              </h2>
-              {description && <p className="mt-1 text-[0.9rem] text-ink-2">{description}</p>}
-            </div>
-            <IconButton label="Close" onClick={onClose} className="-mt-1 -mr-2">
+        <div className="flex min-h-0 flex-col">
+          <div className="mx-auto mt-2.5 h-1.5 w-12 rounded-full bg-line sm:hidden" aria-hidden />
+          <header className="flex items-center justify-between gap-4 px-6 pt-4 pb-2 sm:pt-6">
+            <h2 id={titleId} className="text-[1.25rem] font-semibold">
+              {title}
+            </h2>
+            <IconButton label="Bağla" onClick={onClose} className="-mr-2 text-ink-2">
               <LuX className="size-5" aria-hidden />
             </IconButton>
           </header>
-          <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-5 sm:px-7">{children}</div>
+          <div className="min-h-0 flex-1 overflow-y-auto px-6 pt-2 pb-6">{children}</div>
           {footer && (
-            <footer className="flex flex-wrap items-center justify-end gap-2 border-t border-line/80 bg-card px-5 py-3.5 pb-[calc(0.875rem+env(safe-area-inset-bottom))] sm:px-7">
+            <footer className="flex flex-wrap items-center justify-end gap-2 border-t border-line px-6 py-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
               {footer}
             </footer>
           )}
@@ -370,7 +274,6 @@ export function ConfirmDialog({
   title,
   body,
   confirmLabel,
-  tone = "danger",
 }: {
   open: boolean;
   onClose: () => void;
@@ -378,7 +281,6 @@ export function ConfirmDialog({
   title: string;
   body: ReactNode;
   confirmLabel: string;
-  tone?: "danger" | "primary";
 }) {
   return (
     <Dialog
@@ -388,10 +290,10 @@ export function ConfirmDialog({
       footer={
         <>
           <Button variant="ghost" onClick={onClose}>
-            Cancel
+            Ləğv et
           </Button>
           <Button
-            variant={tone}
+            variant="danger"
             autoFocus
             onClick={() => {
               onConfirm();
@@ -403,53 +305,7 @@ export function ConfirmDialog({
         </>
       }
     >
-      <div className="text-[0.95rem] text-ink-2">{body}</div>
+      <p className="text-[0.95rem] text-ink-2">{body}</p>
     </Dialog>
   );
-}
-
-/* ---------------------------------------------------------------- Misc */
-
-export function Logo({ className, light }: { className?: string; light?: boolean }) {
-  return (
-    <span className={cx("inline-flex items-center gap-2", className)}>
-      <svg viewBox="0 0 28 28" className="size-7" aria-hidden>
-        {/* A luggage tag: the product's one mark. */}
-        <path
-          d="M9 3h10a3 3 0 0 1 3 3v15.5a3.5 3.5 0 0 1-3.5 3.5h-9A3.5 3.5 0 0 1 6 21.5V6a3 3 0 0 1 3-3Z"
-          fill={light ? "#F3F0E7" : "#173B2F"}
-        />
-        <circle cx="14" cy="8.5" r="2" fill={light ? "#173B2F" : "#F3F0E7"} />
-        <path d="M10 15h8M10 19h5" stroke="#F2B33D" strokeWidth="2.2" strokeLinecap="round" />
-      </svg>
-      <span className={cx("font-display text-[1.35rem] leading-none font-semibold tracking-[-0.02em]", light ? "text-paper" : "text-forest")}>
-        Tripmate
-      </span>
-    </span>
-  );
-}
-
-export function EmptyState({
-  title,
-  body,
-  action,
-  art,
-}: {
-  title: string;
-  body?: ReactNode;
-  action?: ReactNode;
-  art?: ReactNode;
-}) {
-  return (
-    <div className="flex flex-col items-center px-6 py-14 text-center">
-      {art}
-      <h3 className="font-display text-2xl font-medium text-ink">{title}</h3>
-      {body && <p className="mt-2 max-w-sm text-[0.95rem] text-ink-2">{body}</p>}
-      {action && <div className="mt-6">{action}</div>}
-    </div>
-  );
-}
-
-export function Panel({ children, className, as: As = "section" }: { children: ReactNode; className?: string; as?: "section" | "div" | "article" }) {
-  return <As className={cx("rounded-2xl bg-card ring-1 ring-line/70 shadow-card", className)}>{children}</As>;
 }

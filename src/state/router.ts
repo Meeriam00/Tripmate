@@ -1,56 +1,49 @@
 import { useEffect, useState } from "react";
 
 /**
- * Tiny hash router. Hash routing means the app works from any static host
- * (Vercel, a file server, GitHub Pages) with no rewrite rules, and deep
- * links survive a refresh.
+ * A tiny hash router. Hash URLs work on any static host with no rewrite
+ * rules, and a refresh keeps you on the same screen.
+ *   #/                         home
+ *   #/yeni                     new trip
+ *   #/seyahet/:id              expenses
+ *   #/seyahet/:id/hesablasma   settlement
+ *   #/seyahet/:id/duzelt       trip settings
  */
 export type Route =
   | { name: "home" }
   | { name: "new" }
-  | { name: "trip"; id: string; tab: TripTab }
+  | { name: "trip"; id: string; tab: "expenses" | "settle" }
   | { name: "edit"; id: string }
-  | { name: "import"; payload: string }
   | { name: "notfound" };
 
-export type TripTab = "overview" | "expenses" | "settle" | "summary";
-const TABS: TripTab[] = ["overview", "expenses", "settle", "summary"];
-
 export function parseHash(hash: string): Route {
-  const path = hash.replace(/^#\/?/, "").split("?")[0];
-  const seg = path.split("/").filter(Boolean).map(decodeURIComponent);
+  const seg = hash.replace(/^#\/?/, "").split("/").filter(Boolean).map(decodeURIComponent);
   if (seg.length === 0) return { name: "home" };
-  if (seg[0] === "new" && seg.length === 1) return { name: "new" };
-  if (seg[0] === "import" && seg[1]) return { name: "import", payload: path.slice("import/".length) };
-  if (seg[0] === "trip" && seg[1]) {
-    if (seg[2] === "edit") return { name: "edit", id: seg[1] };
-    const tab = (seg[2] ?? "overview") as TripTab;
-    if (TABS.includes(tab)) return { name: "trip", id: seg[1], tab };
+  if (seg[0] === "yeni" && seg.length === 1) return { name: "new" };
+  if (seg[0] === "seyahet" && seg[1] && seg.length <= 3) {
+    if (!seg[2]) return { name: "trip", id: seg[1], tab: "expenses" };
+    if (seg[2] === "hesablasma") return { name: "trip", id: seg[1], tab: "settle" };
+    if (seg[2] === "duzelt") return { name: "edit", id: seg[1] };
   }
   return { name: "notfound" };
 }
 
 export function href(r: Route): string {
   switch (r.name) {
-    case "home":
-      return "#/";
     case "new":
-      return "#/new";
+      return "#/yeni";
     case "trip":
-      return r.tab === "overview" ? `#/trip/${r.id}` : `#/trip/${r.id}/${r.tab}`;
+      return `#/seyahet/${r.id}${r.tab === "settle" ? "/hesablasma" : ""}`;
     case "edit":
-      return `#/trip/${r.id}/edit`;
-    case "import":
-      return `#/import/${r.payload}`;
+      return `#/seyahet/${r.id}/duzelt`;
     default:
       return "#/";
   }
 }
 
 export function navigate(r: Route, opts: { replace?: boolean } = {}) {
-  const h = href(r);
-  if (opts.replace) history.replaceState(null, "", h);
-  else history.pushState(null, "", h);
+  if (opts.replace) history.replaceState(null, "", href(r));
+  else history.pushState(null, "", href(r));
   window.dispatchEvent(new HashChangeEvent("hashchange"));
 }
 

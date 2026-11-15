@@ -3,7 +3,7 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
-  "description": "Shared travel expenses, split to the cent and settled in the fewest payments.",
+  "description": "TRIPMATE: səyahət xərclərini dostlarla asan bölüşün.",
   "scripts": {
     "dev": "vite",
     "build": "vite build",

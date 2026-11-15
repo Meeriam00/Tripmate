@@ -1,313 +1,244 @@
 import { useMemo, useRef, useState, type FormEvent } from "react";
 import { LuArrowLeft, LuTrash2, LuUserPlus, LuX } from "react-icons/lu";
+import { AppBar, Shell } from "../components/Shell";
 import { useToast } from "../components/Toast";
-import { TopBar } from "../components/TopBar";
-import { Avatar, Button, ConfirmDialog, Field, IconButton, LinkButton, Panel, Select, TextInput } from "../components/ui";
-import { AVATAR_COLORS, nextColor } from "../lib/avatars";
-import { addDays, isValidISO, todayISO } from "../lib/dates";
-import { COMMON_CURRENCIES } from "../lib/money";
+import { Button, ConfirmDialog, Field, IconButton, LinkButton, PersonTile, TextInput, Tile, cx, inputClass } from "../components/ui";
+import { CURRENCIES } from "../lib/money";
 import { uid } from "../lib/storage";
-import { participantInvolvement } from "../lib/trip";
-import type { Participant, Trip } from "../lib/types";
-import { navigate } from "../state/router";
+import type { Trip } from "../lib/types";
+import { href, navigate } from "../state/router";
 import { useStore } from "../state/store";
+import { NotFound } from "./NotFound";
 
 interface Row {
   id: string;
   name: string;
-  color: number;
   isNew: boolean;
 }
 
-const EXAMPLE_NAMES = ["Maryam", "Ali", "Leyla", "Murad", "Aysel"];
+const EXAMPLES = ["Məryəm", "Əli", "Leyla", "Murad", "Aysel"];
 
 export function TripForm({ tripId }: { tripId?: string }) {
-  const { getTrip, dispatch, trips } = useStore();
+  const { getTrip, dispatch } = useStore();
   const toast = useToast();
   const existing = tripId ? getTrip(tripId) : undefined;
   const editing = !!existing;
 
   const [name, setName] = useState(existing?.name ?? "");
   const [destination, setDestination] = useState(existing?.destination ?? "");
-  const [start, setStart] = useState(existing?.startDate ?? todayISO());
-  const [end, setEnd] = useState(existing?.endDate ?? addDays(todayISO(), 4));
-  const [currency, setCurrency] = useState(existing?.currency ?? "EUR");
+  const [currency, setCurrency] = useState(existing?.currency ?? "AZN");
   const [rows, setRows] = useState<Row[]>(() =>
-    existing
-      ? existing.participants.map((p) => ({ ...p, isNew: false }))
-      : [0, 1, 2, 3, 4].map((i) => ({ id: uid("p-"), name: "", color: i === 4 ? 5 : i, isNew: true })),
+    existing ? existing.participants.map((p) => ({ ...p, isNew: false })) : EXAMPLES.map(() => ({ id: uid("p-"), name: "", isNew: true })),
   );
   const [submitted, setSubmitted] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const nameRefs = useRef<Map<string, HTMLInputElement>>(new Map());
+  const inputs = useRef(new Map<string, HTMLInputElement>());
 
-  const named = rows.filter((r) => r.name.trim());
   const dupes = useMemo(() => {
-    const seen = new Map<string, number>();
+    const count = new Map<string, number>();
     for (const r of rows) {
-      const k = r.name.trim().toLowerCase();
-      if (k) seen.set(k, (seen.get(k) ?? 0) + 1);
+      const k = r.name.trim().toLocaleLowerCase("az");
+      if (k) count.set(k, (count.get(k) ?? 0) + 1);
     }
-    return new Set([...seen].filter(([, c]) => c > 1).map(([k]) => k));
+    return new Set([...count].filter(([, c]) => c > 1).map(([k]) => k));
   }, [rows]);
 
-  if (tripId && !existing) {
-    return (
-      <>
-        <TopBar />
-        <main id="main" className="mx-auto max-w-xl px-6 py-24 text-center">
-          <h1 className="font-display text-3xl font-medium">This trip isn't in this browser</h1>
-          <p className="mt-2 text-ink-2">It may have been deleted, or it was created on another device.</p>
-          <LinkButton href="#/" variant="primary" className="mt-6">
-            Back to your trips
-          </LinkButton>
-        </main>
-      </>
-    );
-  }
+  if (tripId && !existing) return <NotFound what="trip" />;
 
-
+  const used = new Set(existing?.expenses.flatMap((e) => [e.paidBy, ...e.participantIds]) ?? []);
+  const named = rows.filter((r) => r.name.trim());
   const errors = {
-    destination: !destination.trim() ? "Where are you going?" : null,
-    name: null as string | null,
-    start: !isValidISO(start) ? "Pick a start date" : null,
-    end: !isValidISO(end) ? "Pick an end date" : isValidISO(start) && end < start ? "The trip can't end before it starts" : null,
-    people:
-      named.length < 2
-        ? "Add at least two people to split with"
+    name: !name.trim() ? "Səyahətə ad verin" : null,
+    people: rows.some((r) => !r.isNew && !r.name.trim())
+      ? "Mövcud iştirakçının adını boş qoymaq olmaz"
+      : named.length < 2
+        ? "Ən azı iki nəfər əlavə edin"
         : dupes.size
-          ? "Two people have the same name. Add an initial so balances stay clear."
-          : editing && rows.some((r) => !r.isNew && !r.name.trim())
-            ? "Existing participants need a name"
-            : null,
+          ? "İki nəfərin adı eynidir. Onları fərqləndirin, məsələn: «Əli M.»"
+          : null,
   };
-  const valid = Object.values(errors).every((e) => !e);
-  const show = (k: keyof typeof errors) => (submitted ? errors[k] : null);
-
-  const hasExpenses = !!existing && existing.expenses.length > 0;
+  const valid = !errors.name && !errors.people;
 
   function addRow() {
     const id = uid("p-");
-    setRows((r) => [...r, { id, name: "", color: nextColor(r.map((x) => x.color)), isNew: true }]);
-    setTimeout(() => nameRefs.current.get(id)?.focus(), 0);
+    setRows((r) => [...r, { id, name: "", isNew: true }]);
+    setTimeout(() => inputs.current.get(id)?.focus(), 0);
   }
 
   function submit(e: FormEvent) {
     e.preventDefault();
     setSubmitted(true);
     if (!valid) {
-      const first = document.querySelector<HTMLElement>("[aria-invalid=true]");
-      first?.focus();
+      setTimeout(() => document.querySelector<HTMLElement>("[aria-invalid=true]")?.focus(), 0);
       return;
     }
-    const participants: Participant[] = rows
-      .filter((r) => r.name.trim() || !r.isNew)
-      .map((r) => ({ id: r.id, name: r.name.trim().replace(/\s+/g, " "), color: r.color }));
     const trip: Trip = {
-      ...(existing ?? { id: uid("t-"), expenses: [], payments: [], createdAt: Date.now(), updatedAt: Date.now() }),
-      name: name.trim() || destination.trim().split(",")[0],
+      ...(existing ?? { id: uid("t-"), expenses: [], createdAt: Date.now(), updatedAt: Date.now() }),
+      name: name.trim(),
       destination: destination.trim(),
-      startDate: start,
-      endDate: end,
       currency,
-      participants,
-    } as Trip;
-    dispatch({ type: "trip/upsert", trip });
-    toast.show(editing ? "Trip updated" : `${trip.name} is ready. Add the first expense.`);
-    navigate({ name: "trip", id: trip.id, tab: editing ? "overview" : "expenses" }, { replace: true });
+      participants: rows.filter((r) => r.name.trim() || !r.isNew).map((r) => ({ id: r.id, name: r.name.trim().replace(/\s+/g, " ") })),
+    };
+    dispatch({ type: "trip/save", trip });
+    toast.show(editing ? "Dəyişikliklər yadda saxlanıldı" : "Səyahət yaradıldı. İndi ilk xərci əlavə edin.");
+    navigate({ name: "trip", id: trip.id, tab: "expenses" }, { replace: true });
   }
 
-  function deleteTrip() {
-    if (!existing) return;
-    const index = trips.findIndex((t) => t.id === existing.id);
-    dispatch({ type: "trip/delete", id: existing.id });
-    navigate({ name: "home" }, { replace: true });
-    toast.show(`Deleted ${existing.name}`, {
-      tone: "info",
-      action: { label: "Undo", run: () => dispatch({ type: "trip/restore", trip: existing, index }) },
-    });
-  }
+  const back = existing ? href({ name: "trip", id: existing.id, tab: "expenses" }) : href({ name: "home" });
 
   return (
-    <>
-      <TopBar />
-      <main id="main" className="mx-auto max-w-3xl px-4 pt-8 pb-24 sm:px-6 sm:pt-12">
-        <a
-          href={existing ? `#/trip/${existing.id}` : "#/"}
-          className="inline-flex items-center gap-1.5 rounded-md text-[0.88rem] font-medium text-ink-2 hover:text-ink"
-        >
-          <LuArrowLeft aria-hidden /> {existing ? existing.name : "Back"}
-        </a>
-        <h1 className="mt-4 font-display text-[clamp(2.4rem,6vw,3.4rem)] leading-none font-medium tracking-[-0.02em]">
-          {editing ? "Trip settings" : "Where to?"}
-        </h1>
-        {!editing && <p className="mt-3 text-ink-2">The basics now. You can change any of this later.</p>}
-
-        <form onSubmit={submit} noValidate className="mt-10 space-y-6">
-          <Panel className="space-y-5 p-5 sm:p-7">
-            <div className="grid gap-5 sm:grid-cols-2">
-              <Field label="Destination" htmlFor="dest" error={show("destination")}>
-                <TextInput
-                  id="dest"
-                  value={destination}
-                  onChange={(e) => setDestination(e.target.value)}
-                  placeholder="Lisbon, Portugal"
-                  autoFocus={!editing}
-                  invalid={!!show("destination")}
-                  autoComplete="off"
-                />
-              </Field>
-              <Field label="Trip name" htmlFor="tname" optional hint="Defaults to the destination">
-                <TextInput
-                  id="tname"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder={destination.trim() ? `${destination.split(",")[0].trim()} with friends` : "Lisbon long weekend"}
-                  autoComplete="off"
-                />
-              </Field>
-            </div>
-            <div className="grid gap-5 sm:grid-cols-[1fr_1fr_0.8fr]">
-              <Field label="Starts" htmlFor="start" error={show("start")}>
-                <TextInput
-                  id="start"
-                  type="date"
-                  value={start}
-                  onChange={(e) => {
-                    const v = e.target.value;
-                    setStart(v);
-                    if (isValidISO(v) && end < v) setEnd(v);
-                  }}
-                  invalid={!!show("start")}
-                />
-              </Field>
-              <Field label="Ends" htmlFor="end" error={show("end")}>
-                <TextInput id="end" type="date" min={start} value={end} onChange={(e) => setEnd(e.target.value)} invalid={!!show("end")} />
-              </Field>
-              <Field
-                label="Currency"
-                htmlFor="cur"
-                hint={hasExpenses ? "Locked once expenses exist" : "Expenses in other currencies can be converted"}
+    <Shell
+      top={
+        <AppBar
+          left={
+            <a href={back} aria-label="Geri qayıt" className="inline-flex size-10 items-center justify-center rounded-full hover:bg-ink/[0.06]">
+              <LuArrowLeft className="size-5" aria-hidden />
+            </a>
+          }
+          title={editing ? "Səyahət ayarları" : "Yeni səyahət"}
+        />
+      }
+    >
+      <form onSubmit={submit} noValidate className="px-5 pt-7 sm:px-7">
+        <div className="space-y-5">
+          <Field label="Səyahətin adı" htmlFor="t-name" error={submitted ? errors.name : null}>
+            <TextInput
+              id="t-name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Məsələn, Qəbələ həftəsonu"
+              maxLength={60}
+              autoComplete="off"
+              autoFocus={!editing}
+              invalid={submitted && !!errors.name}
+            />
+          </Field>
+          <div className="grid gap-5 sm:grid-cols-[1fr_11rem]">
+            <Field label="İstiqamət" htmlFor="t-dest" optional>
+              <TextInput id="t-dest" value={destination} onChange={(e) => setDestination(e.target.value)} placeholder="Məsələn, Qəbələ" maxLength={60} autoComplete="off" />
+            </Field>
+            <Field label="Valyuta" htmlFor="t-cur" hint={existing?.expenses.length ? "Xərclər əlavə edildikdən sonra dəyişmir" : undefined}>
+              <select
+                id="t-cur"
+                value={currency}
+                onChange={(e) => setCurrency(e.target.value)}
+                disabled={!!existing?.expenses.length}
+                className={cx(inputClass, "appearance-none disabled:bg-mist disabled:text-ink-2")}
               >
-                <Select id="cur" value={currency} onChange={(e) => setCurrency(e.target.value)} disabled={hasExpenses}>
-                  {COMMON_CURRENCIES.map((c) => (
-                    <option key={c} value={c}>
-                      {c}
-                    </option>
-                  ))}
-                </Select>
-              </Field>
-            </div>
-          </Panel>
-
-          <Panel className="p-5 sm:p-7">
-            <div className="flex flex-wrap items-end justify-between gap-3">
-              <div>
-                <h2 className="font-display text-[1.6rem] leading-tight font-medium">Who's coming</h2>
-                <p className="mt-1 text-[0.9rem] text-ink-2">Tap an avatar to change its colour.</p>
-              </div>
-              {!editing && rows.every((r) => !r.name.trim()) && (
-                <Button
-                  size="sm"
-                  variant="quiet"
-                  onClick={() => setRows((rs) => rs.map((r, i) => ({ ...r, name: EXAMPLE_NAMES[i] ?? r.name })))}
-                >
-                  Use example names
-                </Button>
-              )}
-            </div>
-
-            <ul className="mt-5 space-y-2.5">
-              {rows.map((r, i) => {
-                const involvement = existing && !r.isNew ? participantInvolvement(existing, r.id) : null;
-                const dupe = dupes.has(r.name.trim().toLowerCase());
-                return (
-                  <li key={r.id} className="flex items-center gap-3">
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setRows((rs) => rs.map((x) => (x.id === r.id ? { ...x, color: (x.color + 1) % AVATAR_COLORS.length } : x)))
-                      }
-                      aria-label={`Change colour for ${r.name || `person ${i + 1}`}`}
-                      className="rounded-full transition-transform hover:scale-105 active:scale-95"
-                    >
-                      <Avatar person={{ name: r.name || String(i + 1), color: r.color }} size={40} />
-                    </button>
-                    <TextInput
-                      ref={(el) => {
-                        if (el) nameRefs.current.set(r.id, el);
-                        else nameRefs.current.delete(r.id);
-                      }}
-                      value={r.name}
-                      onChange={(e) => setRows((rs) => rs.map((x) => (x.id === r.id ? { ...x, name: e.target.value } : x)))}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                          e.preventDefault();
-                          if (i === rows.length - 1) addRow();
-                          else nameRefs.current.get(rows[i + 1].id)?.focus();
-                        }
-                      }}
-                      placeholder={EXAMPLE_NAMES[i] ? `e.g. ${EXAMPLE_NAMES[i]}` : "Name"}
-                      aria-label={`Person ${i + 1} name`}
-                      invalid={submitted && (dupe || (!r.isNew && !r.name.trim()))}
-                      maxLength={40}
-                      autoComplete="off"
-                    />
-                    <IconButton
-                      label={involvement ? `Can't remove: ${involvement}` : `Remove ${r.name || `person ${i + 1}`}`}
-                      disabled={!!involvement || rows.length <= 2}
-                      onClick={() => setRows((rs) => rs.filter((x) => x.id !== r.id))}
-                    >
-                      <LuX className="size-4.5" aria-hidden />
-                    </IconButton>
-                  </li>
-                );
-              })}
-            </ul>
-            {show("people") && (
-              <p role="alert" className="mt-3 text-[0.84rem] font-medium text-owe">
-                {errors.people}
-              </p>
-            )}
-            {editing && existing!.participants.some((p) => participantInvolvement(existing!, p.id)) && (
-              <p className="mt-3 text-[0.82rem] text-ink-3">
-                People with expenses or payments can be renamed but not removed. Delete or reassign their expenses first.
-              </p>
-            )}
-            <Button variant="ghost" size="sm" className="mt-4" icon={<LuUserPlus aria-hidden />} onClick={addRow}>
-              Add person
-            </Button>
-          </Panel>
-
-          <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
-            {editing ? (
-              <Button variant="quiet" icon={<LuTrash2 aria-hidden />} onClick={() => setConfirmDelete(true)} className="text-owe hover:text-owe">
-                Delete trip
-              </Button>
-            ) : (
-              <span />
-            )}
-            <div className="flex gap-2">
-              <LinkButton href={existing ? `#/trip/${existing.id}` : "#/"} variant="ghost" size="lg">
-                Cancel
-              </LinkButton>
-              <Button type="submit" variant="primary" size="lg" className="flex-1 sm:flex-none">
-                {editing ? "Save changes" : "Create trip"}
-              </Button>
-            </div>
+                {CURRENCIES.map((c) => (
+                  <option key={c.code} value={c.code}>
+                    {c.symbol}  {c.name}
+                  </option>
+                ))}
+              </select>
+            </Field>
           </div>
-        </form>
-      </main>
+        </div>
+
+        <div className="mt-9 flex items-baseline justify-between border-b-2 border-sun pb-3">
+          <h2 className="text-[1rem] font-semibold">Dostlar</h2>
+          <span className="text-[0.8rem] font-medium text-ink-2">{named.length} nəfər</span>
+        </div>
+        <ul className="divide-y divide-line">
+          {rows.map((r, i) => {
+            const locked = !r.isNew && used.has(r.id);
+            const dupe = dupes.has(r.name.trim().toLocaleLowerCase("az"));
+            return (
+              <li key={r.id} className="flex items-center gap-3 py-3">
+                {r.name.trim() ? (
+                  <PersonTile name={r.name} size={44} />
+                ) : (
+                  <Tile size={44}>
+                    <span className="text-ink-3">{i + 1}</span>
+                  </Tile>
+                )}
+                <TextInput
+                  ref={(el) => {
+                    if (el) inputs.current.set(r.id, el);
+                    else inputs.current.delete(r.id);
+                  }}
+                  value={r.name}
+                  onChange={(e) => setRows((rs) => rs.map((x) => (x.id === r.id ? { ...x, name: e.target.value } : x)))}
+                  onKeyDown={(e) => {
+                    if (e.key !== "Enter") return;
+                    e.preventDefault();
+                    if (i === rows.length - 1) addRow();
+                    else inputs.current.get(rows[i + 1].id)?.focus();
+                  }}
+                  placeholder={EXAMPLES[i] ? `Məsələn, ${EXAMPLES[i]}` : "Ad"}
+                  aria-label={`${i + 1}${suffix(i + 1)} dostun adı`}
+                  maxLength={30}
+                  autoComplete="off"
+                  invalid={submitted && (dupe || (!r.isNew && !r.name.trim()))}
+                  className="border-transparent bg-mist hover:border-line"
+                />
+                <IconButton
+                  label={locked ? "Bu şəxsin xərcləri var, onu silmək olmaz" : `Sil: ${r.name.trim() || `${i + 1}${suffix(i + 1)} dost`}`}
+                  disabled={locked || rows.length <= 2}
+                  onClick={() => setRows((rs) => rs.filter((x) => x.id !== r.id))}
+                  className="text-ink-3 hover:text-owe"
+                >
+                  <LuX className="size-5" aria-hidden />
+                </IconButton>
+              </li>
+            );
+          })}
+        </ul>
+        {submitted && errors.people && (
+          <p role="alert" className="mt-1 text-[0.82rem] font-medium text-owe">
+            {errors.people}
+          </p>
+        )}
+        <Button variant="soft" icon={<LuUserPlus aria-hidden />} onClick={addRow} className="mt-4">
+          Dost əlavə et
+        </Button>
+
+        <div className="mt-10 flex flex-col gap-3">
+          <Button type="submit" size="lg" variant="sun" className="w-full">
+            {editing ? "Yadda saxla" : "Səyahəti yarat"}
+          </Button>
+          <LinkButton href={back} variant="ghost" size="lg" className="w-full">
+            Ləğv et
+          </LinkButton>
+          {editing && (
+            <Button variant="ghost" icon={<LuTrash2 aria-hidden />} onClick={() => setConfirmDelete(true)} className="mt-2 self-center text-owe hover:bg-owe/10 hover:text-owe">
+              Səyahəti sil
+            </Button>
+          )}
+        </div>
+      </form>
+
       {existing && (
         <ConfirmDialog
           open={confirmDelete}
           onClose={() => setConfirmDelete(false)}
-          onConfirm={deleteTrip}
-          title={`Delete ${existing.name}?`}
-          body={`All ${existing.expenses.length} expenses and ${existing.payments.length} recorded payments will be removed from this browser.`}
-          confirmLabel="Delete trip"
+          title="Səyahət silinsin?"
+          body={`«${existing.name}» və onun bütün xərcləri bu brauzerdən silinəcək. Bu əməliyyatı geri qaytarmaq mümkün deyil.`}
+          confirmLabel="Səyahəti sil"
+          onConfirm={() => {
+            dispatch({ type: "trip/delete", id: existing.id });
+            toast.show("Səyahət silindi");
+            navigate({ name: "home" }, { replace: true });
+          }}
         />
       )}
-    </>
+    </Shell>
   );
+}
+
+/** Azerbaijani ordinal suffix: 1-ci, 2-ci, 3-cü, 4-cü, 5-ci, 6-cı, 9-cu, 10-cu… */
+export function suffix(n: number): string {
+  const last = n % 10;
+  const tens = n % 100;
+  if (n === 0) return "-cı";
+  if (last === 0) {
+    if ([10, 30].includes(tens)) return "-cu";
+    if ([20, 50, 70, 80].includes(tens)) return "-ci";
+    if ([40, 60, 90].includes(tens)) return "-cı";
+    return "-cü";
+  }
+  if ([1, 2, 5, 7, 8].includes(last)) return "-ci";
+  if ([3, 4].includes(last)) return "-cü";
+  if (last === 6) return "-cı";
+  return "-cu"; // 9
 }

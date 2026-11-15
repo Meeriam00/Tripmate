@@ -1,46 +1,42 @@
 import { strict as assert } from "node:assert";
 import { describe, it } from "node:test";
-import { computeLedgers, outstandingBalances, totalOutstanding } from "./balances";
-import { convert, formatMoney, parseAmount } from "./money";
-import { minimizeTransfers } from "./settle";
-import { allocate, computeShares, validateSplit } from "./split";
+import { computeBalances, settlement, tripTotal } from "./balances";
+import { formatMoney, parseAmount, toInputValue } from "./money";
+import { sampleTrip } from "./sample";
+import { minimizeTransfers, type Transfer } from "./settle";
+import { equalShares } from "./split";
 import type { Expense, Trip } from "./types";
 
 const FIVE = ["maryam", "ali", "leyla", "murad", "aysel"];
 
-function trip(expenses: Partial<Expense>[], payments: Trip["payments"] = []): Trip {
+function trip(expenses: Partial<Expense>[]): Trip {
   return {
     id: "t",
     name: "Test",
-    destination: "Lisbon",
-    startDate: "2026-05-01",
-    endDate: "2026-05-05",
+    destination: "",
     currency: "EUR",
-    participants: FIVE.map((id, i) => ({ id, name: id, color: i })),
+    participants: FIVE.map((id) => ({ id, name: id })),
     expenses: expenses.map((e, i) => ({
       id: `e${i}`,
       title: "x",
       amount: 0,
       paidBy: "maryam",
-      category: "other",
-      date: "2026-05-01",
-      split: { mode: "equal", participantIds: FIVE },
+      participantIds: FIVE,
       createdAt: i,
       ...e,
-    })) as Expense[],
-    payments,
+    })),
     createdAt: 0,
     updatedAt: 0,
   };
 }
 
 const sum = (m: Map<string, number>) => [...m.values()].reduce((s, v) => s + v, 0);
+const nets = (t: Trip) => Object.fromEntries([...computeBalances(t)].map(([id, b]) => [id, b.net]));
 
-/** Apply transfers to balances and assert everyone ends at zero. */
-function assertSettles(balances: Map<string, number>, transfers: ReturnType<typeof minimizeTransfers>) {
+function assertSettles(balances: Map<string, number>, transfers: Transfer[]) {
   const b = new Map(balances);
   for (const t of transfers) {
-    assert.ok(t.amount > 0, "transfer amounts are positive");
+    assert.ok(t.amount > 0);
     assert.notEqual(t.from, t.to);
     b.set(t.from, (b.get(t.from) ?? 0) + t.amount);
     b.set(t.to, (b.get(t.to) ?? 0) - t.amount);
@@ -48,200 +44,122 @@ function assertSettles(balances: Map<string, number>, transfers: ReturnType<type
   for (const [id, v] of b) assert.equal(v, 0, `${id} should be square`);
 }
 
-describe("money", () => {
-  it("parses amounts into minor units", () => {
-    assert.equal(parseAmount("100", "EUR"), 10000);
-    assert.equal(parseAmount("12.5", "EUR"), 1250);
-    assert.equal(parseAmount("12,50", "EUR"), 1250);
-    assert.equal(parseAmount("1,234.56", "EUR"), 123456);
-    assert.equal(parseAmount(".99", "EUR"), 99);
-    assert.equal(parseAmount("1500", "JPY"), 1500);
+describe("pul (money)", () => {
+  it("parses Azerbaijani and international input into qəpik", () => {
+    assert.equal(parseAmount("25"), 2500);
+    assert.equal(parseAmount("25,5"), 2550);
+    assert.equal(parseAmount("25,50"), 2550);
+    assert.equal(parseAmount("25.50"), 2550);
+    assert.equal(parseAmount("1.234,56"), 123456);
+    assert.equal(parseAmount("1,234.56"), 123456);
+    assert.equal(parseAmount("1 234,56"), 123456);
+    assert.equal(parseAmount("1.234"), 123400);
   });
-  it("rejects invalid or over-precise input", () => {
-    assert.equal(parseAmount("", "EUR"), null);
-    assert.equal(parseAmount("abc", "EUR"), null);
-    assert.equal(parseAmount("-5", "EUR"), null);
-    assert.equal(parseAmount("1.234", "EUR"), null);
-    assert.equal(parseAmount("10.5", "JPY"), null);
+  it("rejects invalid input", () => {
+    for (const bad of ["", "abc", "-5", "1,234,5x", "1.2.3,456", "12,5,5"]) assert.equal(parseAmount(bad), null, bad);
+    assert.equal(parseAmount("12,555"), 1255500); // a 3-digit group is thousands, not decimals
   });
-  it("formats with a true minus sign and optional plus", () => {
-    assert.equal(formatMoney(10000, "EUR"), "€100.00");
-    assert.equal(formatMoney(-5000, "EUR"), "−€50.00");
-    assert.equal(formatMoney(5000, "EUR", { signed: true }), "+€50.00");
-    assert.equal(formatMoney(0, "EUR", { signed: true }), "€0.00");
-  });
-  it("converts between currencies with different minor units", () => {
-    assert.equal(convert(10000, "USD", "EUR", 0.92), 9200);
-    assert.equal(convert(1000, "JPY", "EUR", 0.0061), 610);
+  it("formats in Azerbaijani style", () => {
+    assert.equal(formatMoney(123450, "AZN"), "1.234,50 ₼");
+    assert.equal(formatMoney(-2500, "EUR"), "−25,00 €");
+    assert.equal(formatMoney(2500, "AZN", { signed: true }), "+25,00 ₼");
+    assert.equal(formatMoney(0, "AZN", { signed: true }), "0,00 ₼");
+    assert.equal(toInputValue(2550), "25,50");
+    assert.equal(toInputValue(2500), "25");
   });
 });
 
-describe("splitting", () => {
-  it("€100 shared by five is €20 each", () => {
-    const s = computeShares(10000, { mode: "equal", participantIds: FIVE }, "maryam", FIVE);
+describe("bərabər bölgü (equal split)", () => {
+  it("€100 dinner for five is €20 each", () => {
+    const s = equalShares(10000, FIVE, "maryam", FIVE);
     assert.deepEqual([...s.values()], [2000, 2000, 2000, 2000, 2000]);
   });
-
-  it("uneven cents: €100 / 3 sums exactly, payer takes the extra cent", () => {
-    const s = computeShares(10000, { mode: "equal", participantIds: ["ali", "leyla", "murad"] }, "leyla", FIVE);
+  it("€100 / 3 sums exactly and the payer takes the extra cent", () => {
+    const s = equalShares(10000, ["ali", "leyla", "murad"], "leyla", FIVE);
     assert.equal(sum(s), 10000);
-    assert.equal(s.get("leyla"), 3334);
-    assert.equal(s.get("ali"), 3333);
-    assert.equal(s.get("murad"), 3333);
+    assert.deepEqual(Object.fromEntries(s), { leyla: 3334, ali: 3333, murad: 3333 });
   });
-
-  it("uneven cents: €0.07 / 5 hands out 2 extra cents deterministically", () => {
-    const s = computeShares(7, { mode: "equal", participantIds: FIVE }, "aysel", FIVE);
-    assert.equal(sum(s), 7);
-    assert.equal(s.get("aysel"), 2); // payer first
-    assert.equal(s.get("maryam"), 2); // then trip order
-    assert.equal(s.get("ali"), 1);
+  it("leftover cents go to the payer first, then in trip order", () => {
+    const s = equalShares(7, FIVE, "aysel", FIVE);
+    assert.deepEqual(Object.fromEntries(s), { aysel: 2, maryam: 2, ali: 1, leyla: 1, murad: 1 });
   });
-
-  it("payer who does not share pays but owes nothing for it", () => {
-    const t = trip([{ amount: 9000, paidBy: "aysel", split: { mode: "equal", participantIds: ["ali", "leyla", "murad"] } }]);
-    const l = computeLedgers(t);
-    assert.equal(l.get("aysel")!.share, 0);
-    assert.equal(l.get("aysel")!.net, 9000);
-    assert.equal(l.get("ali")!.net, -3000);
-    assert.equal(l.get("maryam")!.net, 0);
-  });
-
-  it("only selected participants share an expense", () => {
-    const s = computeShares(6000, { mode: "equal", participantIds: ["ali", "murad"] }, "maryam", FIVE);
-    assert.deepEqual(Object.fromEntries(s), { ali: 3000, murad: 3000 });
-  });
-
-  it("exact split is used as-is and validated against the total", () => {
-    const split = { mode: "exact" as const, amounts: { maryam: 5000, ali: 3000, leyla: 2000 } };
-    assert.equal(validateSplit(10000, split), null);
-    assert.deepEqual(validateSplit(9000, split), { code: "exact-mismatch", difference: -1000 });
-    assert.deepEqual(validateSplit(11000, split), { code: "exact-mismatch", difference: 1000 });
-    assert.deepEqual(Object.fromEntries(computeShares(10000, split, "maryam", FIVE)), split.amounts);
-  });
-
-  it("weighted shares (nights stayed) use largest remainder and sum exactly", () => {
-    const s = computeShares(10000, { mode: "shares", shares: { maryam: 3, ali: 3, leyla: 1 } }, "ali", FIVE);
-    assert.equal(sum(s), 10000);
-    // 4285.71…, 4285.71…, 1428.57… → floors 4285+4285+1428 = 9998, two cents left
-    assert.equal(s.get("ali"), 4286);
-    assert.equal(s.get("maryam"), 4286);
-    assert.equal(s.get("leyla"), 1428);
-  });
-
-  it("rejects empty splits", () => {
-    assert.deepEqual(validateSplit(100, { mode: "equal", participantIds: [] }), { code: "no-participants" });
-    assert.deepEqual(validateSplit(100, { mode: "shares", shares: { a: 0 } }), { code: "no-participants" });
-  });
-
-  it("allocate never loses or creates a minor unit (fuzz)", () => {
-    for (let i = 0; i < 2000; i++) {
+  it("never loses or creates a cent (fuzz)", () => {
+    for (let i = 0; i < 3000; i++) {
       const amount = Math.floor(Math.random() * 1_000_000);
-      const w = new Map<string, number>();
-      const n = 1 + Math.floor(Math.random() * 9);
-      for (let j = 0; j < n; j++) w.set(`p${j}`, 1 + Math.floor(Math.random() * 5));
-      assert.equal(sum(allocate(amount, w, "p0")), amount);
+      const ids = FIVE.filter(() => Math.random() > 0.4);
+      if (!ids.length) continue;
+      assert.equal(sum(equalShares(amount, ids, FIVE[i % 5], FIVE)), amount);
     }
   });
 });
 
-describe("balances", () => {
+describe("balanslar (balances)", () => {
+  it("Maryam pays €100 for five: the other four owe her €20 each", () => {
+    assert.deepEqual(nets(trip([{ amount: 10000, paidBy: "maryam" }])), {
+      maryam: 8000, ali: -2000, leyla: -2000, murad: -2000, aysel: -2000,
+    });
+  });
   it("matches the brief's worked example", () => {
-    // Paid: Maryam 200, Ali 50, Leyla 0, Murad 150, Aysel 100 — total 500, share 100 each.
     const t = trip([
       { amount: 20000, paidBy: "maryam" },
       { amount: 5000, paidBy: "ali" },
       { amount: 15000, paidBy: "murad" },
       { amount: 10000, paidBy: "aysel" },
     ]);
-    const b = outstandingBalances(t);
-    assert.deepEqual(Object.fromEntries(b), { maryam: 10000, ali: -5000, leyla: -10000, murad: 5000, aysel: 0 });
-    assert.equal(sum(b), 0);
+    assert.deepEqual(nets(t), { maryam: 10000, ali: -5000, leyla: -10000, murad: 5000, aysel: 0 });
   });
-
-  it("Maryam pays €100 dinner for five: the other four owe her €20 each", () => {
-    const b = outstandingBalances(trip([{ amount: 10000, paidBy: "maryam" }]));
-    assert.deepEqual(Object.fromEntries(b), { maryam: 8000, ali: -2000, leyla: -2000, murad: -2000, aysel: -2000 });
+  it("only selected participants share; a payer can pay without sharing", () => {
+    const t = trip([{ amount: 9000, paidBy: "aysel", participantIds: ["ali", "leyla", "murad"] }]);
+    assert.deepEqual(nets(t), { maryam: 0, ali: -3000, leyla: -3000, murad: -3000, aysel: 9000 });
   });
-
-  it("editing and deleting expenses recalculates from scratch", () => {
+  it("editing and deleting an expense recalculates from scratch", () => {
     const base = trip([{ amount: 10000, paidBy: "maryam" }, { amount: 5000, paidBy: "ali" }]);
     const edited = { ...base, expenses: base.expenses.map((e) => (e.id === "e0" ? { ...e, amount: 5000 } : e)) };
-    assert.equal(outstandingBalances(edited).get("maryam"), 3000);
+    assert.equal(nets(edited).maryam, 3000);
     const deleted = { ...base, expenses: base.expenses.filter((e) => e.id !== "e0") };
-    assert.equal(outstandingBalances(deleted).get("maryam"), -1000);
+    assert.equal(nets(deleted).maryam, -1000);
   });
-
-  it("recorded payments reduce outstanding balances without touching expenses", () => {
-    const t = trip([{ amount: 10000, paidBy: "maryam" }], [
-      { id: "p", from: "ali", to: "maryam", amount: 2000, date: "2026-05-06", createdAt: 0 },
-    ]);
-    const l = computeLedgers(t);
-    assert.equal(l.get("ali")!.outstanding, 0);
-    assert.equal(l.get("maryam")!.outstanding, 6000);
-    assert.equal(l.get("maryam")!.net, 8000, "net from expenses is unchanged");
-    const transfers = minimizeTransfers(outstandingBalances(t), FIVE);
-    assert.equal(transfers.length, 3);
-    assert.ok(transfers.every((x) => x.from !== "ali"), "Ali is not asked to pay twice");
-  });
-
-  it("total owed equals total receivable", () => {
+  it("balances always sum to zero and owed equals receivable", () => {
     const t = trip([
       { amount: 12345, paidBy: "maryam" },
-      { amount: 999, paidBy: "leyla", split: { mode: "equal", participantIds: ["ali", "leyla", "murad"] } },
-      { amount: 7001, paidBy: "aysel", split: { mode: "shares", shares: { maryam: 2, aysel: 1 } } },
+      { amount: 999, paidBy: "leyla", participantIds: ["ali", "leyla", "murad"] },
+      { amount: 7001, paidBy: "aysel", participantIds: ["maryam", "aysel"] },
     ]);
-    const b = outstandingBalances(t);
-    let receivable = 0;
-    for (const v of b.values()) if (v > 0) receivable += v;
-    assert.equal(totalOutstanding(b), receivable);
-    assert.equal(sum(b), 0);
+    const v = Object.values(nets(t));
+    assert.equal(v.reduce((a, b) => a + b, 0), 0);
+    assert.equal(-v.filter((x) => x < 0).reduce((a, b) => a + b, 0), v.filter((x) => x > 0).reduce((a, b) => a + b, 0));
+  });
+  it("sample trip settles completely", () => {
+    const t = sampleTrip();
+    const b = new Map(Object.entries(nets(t)));
+    assertSettles(b, settlement(t));
+    assert.equal(tripTotal(t), 104050);
   });
 });
 
-describe("minimum-transfer settlement", () => {
+describe("hesablaşma (minimum transfers)", () => {
   it("settles the brief's example in two transfers (brief suggested three)", () => {
     const b = new Map(Object.entries({ maryam: 10000, ali: -5000, leyla: -10000, murad: 5000, aysel: 0 }));
     const t = minimizeTransfers(b, FIVE);
-    assert.equal(t.length, 2);
-    assertSettles(b, t);
     assert.deepEqual(t, [
       { from: "leyla", to: "maryam", amount: 10000 },
       { from: "ali", to: "murad", amount: 5000 },
     ]);
   });
-
-  it("beats the naive greedy approach where greedy is suboptimal", () => {
-    // Greedy (largest debtor → largest creditor) needs 4 transfers here; optimum is 3:
-    // {Dan −30, Eve +30} and {Ann −20, Cat −20, Bob +40}.
-    const b = new Map(Object.entries({ ann: -2000, bob: 4000, cat: -2000, dan: -3000, eve: 3000 }));
+  it("beats greedy where greedy is suboptimal", () => {
+    const b = new Map(Object.entries({ a: -2000, b: 4000, c: -2000, d: -3000, e: 3000 }));
     const t = minimizeTransfers(b);
     assert.equal(t.length, 3);
     assertSettles(b, t);
   });
-
-  it("people with zero balance never appear", () => {
-    const b = new Map(Object.entries({ a: 0, b: 500, c: -500, d: 0 }));
-    const t = minimizeTransfers(b);
-    assert.deepEqual(t, [{ from: "c", to: "b", amount: 500 }]);
+  it("people with zero balance never appear; nothing to do when square", () => {
+    assert.deepEqual(minimizeTransfers(new Map(Object.entries({ a: 0, b: 500, c: -500 }))), [{ from: "c", to: "b", amount: 500 }]);
+    assert.deepEqual(minimizeTransfers(new Map([["a", 0]])), []);
   });
-
-  it("returns nothing when everyone is square", () => {
-    assert.deepEqual(minimizeTransfers(new Map([["a", 0], ["b", 0]])), []);
-  });
-
   it("throws if balances do not sum to zero", () => {
     assert.throws(() => minimizeTransfers(new Map([["a", 1]])));
   });
-
-  it("one creditor, many debtors: n − 1 transfers", () => {
-    const b = new Map(Object.entries({ a: 8000, b: -2000, c: -2000, d: -2000, e: -2000 }));
-    const t = minimizeTransfers(b);
-    assert.equal(t.length, 4);
-    assertSettles(b, t);
-  });
-
-  it("is optimal against brute force on random small groups", () => {
+  it("is optimal against brute force on random groups", () => {
     for (let round = 0; round < 300; round++) {
       const n = 2 + Math.floor(Math.random() * 6);
       const vals = Array.from({ length: n - 1 }, () => Math.floor(Math.random() * 7 - 3) * 500);
@@ -249,12 +167,11 @@ describe("minimum-transfer settlement", () => {
       const b = new Map(vals.map((v, i) => [`p${i}`, v]));
       const t = minimizeTransfers(b);
       assertSettles(b, t);
-      const nonZero = vals.filter((v) => v !== 0);
-      assert.equal(t.length, nonZero.length - maxZeroGroups(nonZero), `balances ${vals}`);
+      const nz = vals.filter((v) => v !== 0);
+      assert.equal(t.length, nz.length - maxZeroGroups(nz), `balances ${vals}`);
     }
   });
-
-  it("works for 2, 10 and 25 participants", () => {
+  it("works for 2, 10 and 25 people", () => {
     for (const n of [2, 10, 25]) {
       const vals = Array.from({ length: n - 1 }, () => Math.floor(Math.random() * 20000 - 10000));
       vals.push(0 - vals.reduce((s, v) => s + v, 0) || 0);
@@ -266,7 +183,6 @@ describe("minimum-transfer settlement", () => {
   });
 });
 
-/** Reference brute force: max number of disjoint zero-sum groups. */
 function maxZeroGroups(vals: number[]): number {
   const n = vals.length;
   let best = 0;
