@@ -1,20 +1,25 @@
 import { strict as assert } from "node:assert";
 import { describe, it } from "node:test";
-import { computeBalances, settlement, tripTotal } from "./balances";
+import { categoryTotals, computeBalances, settlement, tripTotal } from "./balances";
+import { formatDay, formatRange, tripDays } from "./dates";
 import { formatMoney, parseAmount, toInputValue } from "./money";
+import { fileSlug, insights, tripCSV } from "./report";
 import { sampleTrip } from "./sample";
 import { minimizeTransfers, type Transfer } from "./settle";
-import { equalShares } from "./split";
-import type { Expense, Trip } from "./types";
+import { customDifference, equalShares, sharesFor } from "./split";
+import type { Expense, Payment, Trip } from "./types";
 
 const FIVE = ["maryam", "ali", "leyla", "murad", "aysel"];
 
-function trip(expenses: Partial<Expense>[]): Trip {
+function trip(expenses: Partial<Expense>[], payments: Payment[] = []): Trip {
   return {
     id: "t",
     name: "Test",
     destination: "",
+    startDate: "2026-07-10",
+    endDate: "2026-07-13",
     currency: "EUR",
+    payments,
     participants: FIVE.map((id) => ({ id, name: id })),
     expenses: expenses.map((e, i) => ({
       id: `e${i}`,
@@ -22,6 +27,8 @@ function trip(expenses: Partial<Expense>[]): Trip {
       amount: 0,
       paidBy: "maryam",
       participantIds: FIVE,
+      category: "other",
+      date: "2026-07-10",
       createdAt: i,
       ...e,
     })),
@@ -131,9 +138,9 @@ describe("balanslar (balances)", () => {
   });
   it("sample trip settles completely", () => {
     const t = sampleTrip();
-    const b = new Map(Object.entries(nets(t)));
+    const b = new Map([...computeBalances(t)].map(([id, x]) => [id, x.outstanding]));
     assertSettles(b, settlement(t));
-    assert.equal(tripTotal(t), 104050);
+    assert.equal(tripTotal(t), 126450);
   });
 });
 
@@ -180,6 +187,62 @@ describe("hesablaşma (minimum transfers)", () => {
       assertSettles(b, t);
       assert.ok(t.length <= vals.filter((v) => v !== 0).length - 1);
     }
+  });
+});
+
+describe("fərdi bölgü (custom split)", () => {
+  it("uses the exact amounts entered", () => {
+    const e = { amount: 6000, paidBy: "aysel", participantIds: ["aysel", "maryam", "leyla"], custom: { aysel: 3000, maryam: 2000, leyla: 1000 } } as Expense;
+    assert.deepEqual(Object.fromEntries(sharesFor(e, FIVE)), { aysel: 3000, maryam: 2000, leyla: 1000 });
+    assert.equal(customDifference(6000, e.custom!, e.participantIds), 0);
+    assert.equal(customDifference(7000, e.custom!, e.participantIds), 1000);
+    assert.equal(customDifference(5000, e.custom!, e.participantIds), -1000);
+  });
+  it("feeds balances like any other expense", () => {
+    const t = trip([{ amount: 6000, paidBy: "aysel", participantIds: ["aysel", "maryam", "leyla"], custom: { aysel: 3000, maryam: 2000, leyla: 1000 } }]);
+    assert.deepEqual(nets(t), { maryam: -2000, ali: 0, leyla: -1000, murad: 0, aysel: 3000 });
+  });
+});
+
+describe("ödənişlər (payments)", () => {
+  it("a recorded payment reduces what is outstanding but never the expense history", () => {
+    const t = trip([{ amount: 10000, paidBy: "maryam" }], [{ id: "p", from: "ali", to: "maryam", amount: 2000, createdAt: 0 }]);
+    const b = computeBalances(t);
+    assert.equal(b.get("ali")!.net, -2000, "net from expenses is unchanged");
+    assert.equal(b.get("ali")!.outstanding, 0);
+    assert.equal(b.get("maryam")!.outstanding, 6000);
+    const plan = settlement(t);
+    assert.equal(plan.length, 3);
+    assert.ok(plan.every((x) => x.from !== "ali"), "Ali is not asked to pay twice");
+  });
+  it("marking every suggested transfer as paid settles the trip", () => {
+    const t = sampleTrip();
+    for (const tr of settlement(t)) t.payments.push({ id: tr.from + tr.to, ...tr, createdAt: 0 });
+    assert.deepEqual(settlement(t), []);
+    for (const b of computeBalances(t).values()) assert.equal(b.outstanding, 0);
+  });
+});
+
+describe("tarixlər və hesabat (dates and report)", () => {
+  it("formats dates in Azerbaijani", () => {
+    assert.equal(formatDay("2026-07-14"), "14 iyul");
+    assert.equal(formatRange("2026-07-10", "2026-07-13"), "10–13 iyul 2026");
+    assert.equal(formatRange("2026-06-30", "2026-07-02"), "30 iyun – 2 iyul 2026");
+    assert.equal(formatRange("2026-12-30", "2027-01-02"), "30 dekabr 2026 – 2 yanvar 2027");
+    assert.equal(tripDays("2026-07-10", "2026-07-13"), 4);
+  });
+  it("sample trip: totals, categories, insights and CSV", () => {
+    const t = sampleTrip();
+    assert.equal(tripTotal(t), 126450);
+    assert.equal(categoryTotals(t).reduce((s, c) => s + c.amount, 0), 126450);
+    assert.equal(t.payments.length, 1);
+    const lines = insights(t);
+    assert.ok(lines.some((l) => l.includes("Məryəm")));
+    const csv = tripCSV(t);
+    assert.ok(csv.startsWith("\uFEFFTRIPMATE — Qəbələ həftəsonu"));
+    assert.ok(csv.includes("Ödənilib") && csv.includes("Ödənilməyib"));
+    assert.ok(!/\b(paid|amount|total|share|expense)\b/i.test(csv), "CSV is in Azerbaijani");
+    assert.equal(fileSlug("Qəbələ həftəsonu"), "qebele-heftesonu");
   });
 });
 

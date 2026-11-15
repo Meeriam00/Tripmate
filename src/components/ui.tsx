@@ -1,4 +1,4 @@
-import { forwardRef, useEffect, useId, useRef, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode } from "react";
+import { forwardRef, useEffect, useId, useRef, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes } from "react";
 import { LuX } from "react-icons/lu";
 
 export function cx(...c: (string | false | null | undefined)[]) {
@@ -197,6 +197,75 @@ export function SectionHead({ title, aside, id }: { title: string; aside?: React
       </h2>
       {aside && <span className="text-[0.8rem] font-medium text-ink-2">{aside}</span>}
     </div>
+  );
+}
+
+/* ---------------------------------------------------------------- Surfaces */
+
+/** A white content surface. Used sparingly: one per logical section. */
+export function Panel({
+  title,
+  aside,
+  children,
+  className,
+  footer,
+  id,
+}: {
+  title?: string;
+  aside?: ReactNode;
+  children: ReactNode;
+  className?: string;
+  footer?: ReactNode;
+  id?: string;
+}) {
+  return (
+    <section aria-labelledby={title ? id : undefined} className={cx("overflow-hidden rounded-[24px] bg-white shadow-[0_1px_2px_rgb(80_50_10/0.04),0_8px_28px_-14px_rgb(80_50_10/0.16)]", className)}>
+      {title && (
+        <div className="flex items-baseline justify-between gap-4 border-b-2 border-sun px-6 pt-5 pb-3.5">
+          <h2 id={id} className="text-[1.02rem] font-semibold text-ink">
+            {title}
+          </h2>
+          {aside && <div className="text-[0.82rem] font-medium text-ink-2">{aside}</div>}
+        </div>
+      )}
+      {children}
+      {footer && <div className="border-t border-line px-6 py-3.5">{footer}</div>}
+    </section>
+  );
+}
+
+export const selectClass = cx(inputClass, "appearance-none pr-10");
+
+/** Native select with the brand chevron. */
+export function Select({ className, children, ...rest }: SelectHTMLAttributes<HTMLSelectElement>) {
+  return (
+    <select
+      className={cx(selectClass, className)}
+      style={{
+        backgroundRepeat: "no-repeat",
+        backgroundPosition: "right 14px center",
+        backgroundSize: "16px",
+        backgroundImage:
+          "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%235c5c5c' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E\")",
+      }}
+      {...rest}
+    >
+      {children}
+    </select>
+  );
+}
+
+export function StatusPill({ paid }: { paid: boolean }) {
+  return (
+    <span
+      className={cx(
+        "inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[0.78rem] font-semibold whitespace-nowrap",
+        paid ? "bg-gain/10 text-gain" : "bg-sun-soft text-ink",
+      )}
+    >
+      <span className={cx("size-1.5 rounded-full", paid ? "bg-gain" : "bg-sun-2")} aria-hidden />
+      {paid ? "Ödənilib" : "Ödənilməyib"}
+    </span>
   );
 }
 

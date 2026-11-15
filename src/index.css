@@ -62,7 +62,7 @@
   margin: auto;
   padding: 0;
   border: 0;
-  width: min(30rem, calc(100vw - 2rem));
+  width: min(38rem, calc(100vw - 2rem));
   max-height: min(90dvh, 820px);
   border-radius: 28px;
   background: #fff;
@@ -113,5 +113,21 @@
   *::after {
     animation-duration: 1ms !important;
     transition-duration: 1ms !important;
+  }
+}
+
+/* ---------- Printed / PDF report */
+@media print {
+  @page {
+    size: A4;
+    margin: 14mm 14mm 16mm;
+  }
+  html,
+  body {
+    background: #fff !important;
+  }
+  .tm-dialog,
+  [role="region"] {
+    display: none !important;
   }
 }

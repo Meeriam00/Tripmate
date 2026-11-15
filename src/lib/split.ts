@@ -27,6 +27,17 @@ export function equalShares(amount: number, participantIds: ID[], payerId: ID, o
   return out;
 }
 
+/** Each participant's share of one expense: the custom amounts if set, else an equal split. */
 export function sharesFor(expense: Expense, order: ID[]): Map<ID, number> {
+  if (expense.custom) {
+    const out = new Map<ID, number>();
+    for (const id of expense.participantIds) if (expense.custom[id]) out.set(id, expense.custom[id]);
+    return out;
+  }
   return equalShares(expense.amount, expense.participantIds, expense.paidBy, order);
+}
+
+/** Validate a custom split. Returns the difference (amount − sum); 0 means valid. */
+export function customDifference(amount: number, custom: Record<ID, number>, participantIds: ID[]): number {
+  return amount - participantIds.reduce((s, id) => s + (custom[id] ?? 0), 0);
 }
