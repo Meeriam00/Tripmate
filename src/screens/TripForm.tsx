@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState, type FormEvent } from "react";
-import { LuTrash2, LuUserPlus, LuX } from "react-icons/lu";
+import { LuX } from "react-icons/lu";
 import { useToast } from "../components/Toast";
 import { Button, ConfirmDialog, Field, IconButton, LinkButton, PersonTile, Select, TextInput, Tile, cx } from "../components/ui";
 import { isISO } from "../lib/dates";
@@ -170,6 +170,7 @@ export function TripForm({ existing, cancelHref }: { existing?: Trip; cancelHref
               />
               <IconButton
                 label={locked ? "Bu şəxsin xərcləri var, onu silmək olmaz" : `Sil: ${r.name.trim() || `${i + 1}${suffix(i + 1)} dost`}`}
+                tip={locked ? "Xərcləri var, silmək olmaz" : "Sil"}
                 disabled={locked || rows.length <= 2}
                 onClick={() => setRows((rs) => rs.filter((x) => x.id !== r.id))}
                 className="text-ink-3 hover:text-owe"
@@ -186,14 +187,14 @@ export function TripForm({ existing, cancelHref }: { existing?: Trip; cancelHref
             {errors.people}
           </p>
         )}
-        <Button variant="soft" icon={<LuUserPlus aria-hidden />} onClick={addRow} className="mt-4">
+        <Button variant="soft" onClick={addRow} className="mt-4">
           Dost əlavə et
         </Button>
       </div>
 
       <div className="mt-8 flex flex-col-reverse items-stretch gap-3 border-t border-line bg-cream-2/50 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
         {editing ? (
-          <Button variant="ghost" icon={<LuTrash2 aria-hidden />} onClick={() => setConfirmDelete(true)} className="text-owe hover:bg-owe/10 hover:text-owe">
+          <Button variant="ghost" onClick={() => setConfirmDelete(true)} className="text-owe hover:bg-owe/10 hover:text-owe">
             Səfəri sil
           </Button>
         ) : (

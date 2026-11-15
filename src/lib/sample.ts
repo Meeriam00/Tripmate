@@ -2,6 +2,7 @@ import { settlement } from "./balances";
 import type { Category, Expense, Trip } from "./types";
 
 export const SAMPLE_TRIP_ID = "numune-qebele";
+export const SAMPLE_UPCOMING_ID = "numune-sahdag";
 
 const M = "p-maryam";
 const A = "p-ali";
@@ -79,4 +80,33 @@ export function sampleTrip(): Trip {
     ...[...trip.expenses].reverse().map((e) => ({ id: `a-${e.id}`, kind: "add" as const, title: e.title, amount: e.amount, at: e.createdAt })),
   ];
   return trip;
+}
+
+/** A second, upcoming trip so the home page shows more than one postcard. */
+export function upcomingTrip(): Trip {
+  const at = Date.UTC(2026, 10, 2, 12);
+  const expenses: Expense[] = [
+    { id: "sahdag-x1", title: "Otel beh", amount: 40000, paidBy: L, participantIds: [M, L, MU, AY], category: "stay", date: "2026-11-02", createdAt: at },
+    { id: "sahdag-x2", title: "Xizək icarəsi, onlayn", amount: 22000, paidBy: MU, participantIds: [L, MU, AY], category: "fun", date: "2026-11-05", createdAt: at + 3 * 86_400_000 },
+  ];
+  return {
+    id: SAMPLE_UPCOMING_ID,
+    name: "Şahdağda qış",
+    destination: "Şahdağ, Qusar",
+    startDate: "2027-01-08",
+    endDate: "2027-01-11",
+    currency: "AZN",
+    budget: 120000,
+    participants: [
+      { id: M, name: "Məryəm" },
+      { id: L, name: "Leyla" },
+      { id: MU, name: "Murad" },
+      { id: AY, name: "Aysel" },
+    ],
+    expenses,
+    payments: [],
+    activity: [...expenses].reverse().map((e) => ({ id: `a-${e.id}`, kind: "add" as const, title: e.title, amount: e.amount, at: e.createdAt })),
+    createdAt: at,
+    updatedAt: at + 3 * 86_400_000,
+  };
 }

@@ -66,12 +66,12 @@ export function LinkButton({
   );
 }
 
-export function IconButton({ label, children, className, ...rest }: ButtonHTMLAttributes<HTMLButtonElement> & { label: string }) {
+export function IconButton({ label, tip, children, className, ...rest }: ButtonHTMLAttributes<HTMLButtonElement> & { label: string; tip?: string }) {
   return (
     <button
       type="button"
       aria-label={label}
-      title={label}
+      data-tip={tip ?? label}
       className={cx(
         "inline-flex size-10 shrink-0 items-center justify-center rounded-full text-ink transition-colors hover:bg-ink/[0.06] disabled:opacity-30",
         className,
@@ -222,7 +222,7 @@ export function Panel({
     <section aria-labelledby={title ? id : undefined} className={cx("overflow-hidden rounded-[24px] bg-white shadow-[0_1px_2px_rgb(80_50_10/0.04),0_8px_28px_-14px_rgb(80_50_10/0.16)]", className)}>
       {title && (
         <div className="flex items-baseline justify-between gap-4 border-b-2 border-sun px-6 pt-5 pb-3.5">
-          <h2 id={id} className="text-[1.02rem] font-semibold text-ink">
+          <h2 id={id} className="font-serif text-[1.22rem] font-semibold text-ink">
             {title}
           </h2>
           {aside && <div className="text-[0.82rem] font-medium text-ink-2">{aside}</div>}

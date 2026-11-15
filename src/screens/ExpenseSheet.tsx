@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { LuCheck, LuChevronDown, LuTrash2 } from "react-icons/lu";
+import { LuChevronDown } from "react-icons/lu";
 import { CATEGORY_ICON } from "../components/CategoryIcon";
 import { Button, Chip, ConfirmDialog, Dialog, Field, TextInput, cx, inputClass } from "../components/ui";
 import { CATEGORY, CATEGORY_ORDER } from "../lib/categories";
@@ -170,7 +170,7 @@ export function ExpenseSheet({
         footer={
           <>
             {expense && (
-              <Button variant="ghost" icon={<LuTrash2 aria-hidden />} onClick={() => setConfirm(true)} className="mr-auto px-3 text-owe hover:bg-owe/10 hover:text-owe">
+              <Button variant="ghost" onClick={() => setConfirm(true)} className="mr-auto px-3 text-owe hover:bg-owe/10 hover:text-owe">
                 Sil
               </Button>
             )}
@@ -276,7 +276,6 @@ export function ExpenseSheet({
                 const on = d.participantIds.includes(p.id);
                 return (
                   <Chip key={p.id} role="checkbox" selected={on} onClick={() => toggle(p.id)}>
-                    {on && <LuCheck className="-ml-1 size-4" aria-hidden />}
                     {p.name}
                   </Chip>
                 );

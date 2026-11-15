@@ -16,7 +16,7 @@ export const CATEGORY_ICON = {
 export function CategoryTile({ category, size = 44 }: { category: Category; size?: number }) {
   const Icon = CATEGORY_ICON[category];
   return (
-    <span title={CATEGORY[category].label} className="contents">
+    <span data-tip={CATEGORY[category].label} aria-hidden="true" className="relative inline-flex shrink-0">
       <Tile size={size}>
         <Icon style={{ width: size * 0.45, height: size * 0.45 }} />
       </Tile>

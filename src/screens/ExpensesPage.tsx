@@ -1,9 +1,9 @@
 import { Fragment, useMemo, useState } from "react";
-import { LuChevronDown, LuFilterX, LuPencil, LuPlus, LuReceipt, LuSearch, LuTrash2 } from "react-icons/lu";
-import { CATEGORY_ICON, CategoryTile } from "../components/CategoryIcon";
+import { LuChevronDown, LuPencil, LuSearch, LuTrash2 } from "react-icons/lu";
+import { CategoryTile } from "../components/CategoryIcon";
 import { SectionTitle, useExpenseSheet } from "../components/Layout";
 import { useToast } from "../components/Toast";
-import { Button, ConfirmDialog, IconButton, Panel, PersonTile, Select, Tile, cx, inputClass } from "../components/ui";
+import { Button, ConfirmDialog, IconButton, Panel, Select, cx, inputClass } from "../components/ui";
 import { categoryTotals, tripTotal } from "../lib/balances";
 import { CATEGORY } from "../lib/categories";
 import { formatDay, formatDayLong } from "../lib/dates";
@@ -76,12 +76,9 @@ export function ExpensesPage({ trip }: { trip: Trip }) {
         {header}
         <Panel>
           <div className="flex flex-col items-center px-8 py-20 text-center">
-            <Tile size={64}>
-              <LuReceipt className="size-7" />
-            </Tile>
-            <h2 className="mt-5 text-[1.15rem] font-semibold">Hələ xərc yoxdur</h2>
+            <h2 className="font-serif text-[1.6rem] font-semibold">Hələ xərc yoxdur</h2>
             <p className="mt-1.5 max-w-sm text-[0.92rem] text-ink-2">Benzin, ev kirayəsi, şam yeməyi: kimsə nəyəsə pul ödəyən kimi buraya yazın.</p>
-            <Button className="mt-6" icon={<LuPlus aria-hidden />} onClick={() => openSheet()}>
+            <Button className="mt-6" onClick={() => openSheet()}>
               İlk xərci əlavə et
             </Button>
           </div>
@@ -97,7 +94,7 @@ export function ExpensesPage({ trip }: { trip: Trip }) {
       <div className="mb-4 grid gap-3 xl:grid-cols-[minmax(0,1fr)_auto]">
         <div className="relative">
           <LuSearch className="pointer-events-none absolute top-1/2 left-4 -translate-y-1/2 text-ink-3" aria-hidden />
-          <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Xərc axtar" aria-label="Xərc axtar" className={cx(inputClass, "h-11 pl-11")} />
+          <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Axtar" aria-label="Xərc axtar" className={cx(inputClass, "h-11 pl-11")} />
         </div>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:flex">
           <Select value={payer} onChange={(e) => setPayer(e.target.value)} aria-label="Ödəyən üzrə süzgəc" className="h-11 xl:w-[12rem]">
@@ -134,7 +131,6 @@ export function ExpensesPage({ trip }: { trip: Trip }) {
           Hamısı <span className="tabular opacity-70">{formatMoney(tripTotal(trip), cur)}</span>
         </button>
         {cats.map((c) => {
-          const Icon = CATEGORY_ICON[c.category];
           const on = cat === c.category;
           return (
             <button
@@ -143,7 +139,6 @@ export function ExpensesPage({ trip }: { trip: Trip }) {
               onClick={() => setCat(on ? "all" : c.category)}
               className={cx("inline-flex shrink-0 items-center gap-2 rounded-full border-2 px-4 py-2 text-[0.86rem] font-medium transition-colors", on ? "border-sun bg-sun text-ink" : "border-line bg-white text-ink-2 hover:border-sun-soft hover:text-ink")}
             >
-              <Icon className="size-4" aria-hidden />
               {CATEGORY[c.category].label}
               <span className="tabular opacity-70">{formatMoney(c.amount, cur)}</span>
             </button>
@@ -165,7 +160,7 @@ export function ExpensesPage({ trip }: { trip: Trip }) {
           <div className="flex items-center justify-between gap-3 border-b border-line bg-cream-2/60 px-6 py-2.5 text-[0.84rem]">
             <span className="text-ink-2">Süzgəc tətbiq olunub</span>
             <button onClick={clear} className="inline-flex items-center gap-1.5 rounded font-semibold text-ink hover:text-sun-2">
-              <LuFilterX className="size-4" aria-hidden /> Süzgəcləri təmizlə
+              Süzgəcləri təmizlə
             </button>
           </div>
         )}
@@ -202,18 +197,20 @@ export function ExpensesPage({ trip }: { trip: Trip }) {
                           <span className="min-w-0">
                             <span className="block truncate text-[0.95rem] font-medium text-ink">{e.title}</span>
                             <span className="block truncate text-[0.76rem] text-ink-3">
-                              {CATEGORY[e.category].label}
-                              <span className="md:hidden">, {name(e.paidBy)} ödədi, {formatDay(e.date)}</span>
+                              <span className="md:hidden">
+                                {name(e.paidBy)} ödədi, {formatDay(e.date)}
+                              </span>
+                              <span className="max-md:hidden">
+                                {CATEGORY[e.category].label}
+                                {e.note ? `, ${e.note}` : ""}
+                              </span>
                             </span>
                           </span>
                         </button>
                       </td>
                       <td className="py-3.5 pr-4 text-[0.88rem] whitespace-nowrap text-ink-2 max-md:hidden">{formatDay(e.date)}</td>
                       <td className="py-3.5 pr-4 max-md:hidden">
-                        <span className="flex items-center gap-2 text-[0.88rem] whitespace-nowrap">
-                          <PersonTile name={name(e.paidBy)} size={28} />
-                          {name(e.paidBy)}
-                        </span>
+                        <span className="text-[0.9rem] whitespace-nowrap">{name(e.paidBy)}</span>
                       </td>
                       <td className="py-3.5 pr-4 text-[0.84rem] whitespace-nowrap text-ink-2 max-xl:hidden">
                         {everyone ? "Hamı" : `${e.participantIds.length} nəfər`}
@@ -222,13 +219,13 @@ export function ExpensesPage({ trip }: { trip: Trip }) {
                       <td className="py-3.5 pr-4 text-right text-[0.95rem] font-semibold whitespace-nowrap tabular max-md:py-0 max-md:pr-0 max-md:pl-3">{formatMoney(e.amount, cur)}</td>
                       <td className="py-3.5 pr-6 max-md:hidden">
                         <div className="flex items-center justify-end gap-0.5 transition-opacity md:opacity-0 md:group-focus-within:opacity-100 md:group-hover:opacity-100">
-                          <IconButton label={`Düzəlt: ${e.title}`} onClick={() => openSheet(e)} className="size-9 text-ink-2">
+                          <IconButton label={`Düzəlt: ${e.title}`} tip="Düzəlt" onClick={() => openSheet(e)} className="size-9 text-ink-2">
                             <LuPencil className="size-4" aria-hidden />
                           </IconButton>
-                          <IconButton label={`Sil: ${e.title}`} onClick={() => setToDelete(e)} className="size-9 text-ink-2 hover:text-owe max-md:hidden">
+                          <IconButton label={`Sil: ${e.title}`} tip="Sil" onClick={() => setToDelete(e)} className="size-9 text-ink-2 hover:text-owe max-md:hidden">
                             <LuTrash2 className="size-4" aria-hidden />
                           </IconButton>
-                          <IconButton label={open ? "Payları gizlət" : "Payları göstər"} onClick={() => setExpanded(open ? null : e.id)} className="size-9 text-ink-2">
+                          <IconButton label={open ? "Payları gizlət" : "Payları göstər"} tip={open ? "Gizlət" : "Hər kəsin payı"} onClick={() => setExpanded(open ? null : e.id)} className="size-9 text-ink-2">
                             <LuChevronDown className={cx("size-4 transition-transform", open && "rotate-180")} aria-hidden />
                           </IconButton>
                         </div>
@@ -245,18 +242,17 @@ export function ExpensesPage({ trip }: { trip: Trip }) {
                             {trip.participants
                               .filter((p) => shares.has(p.id))
                               .map((p) => (
-                                <li key={p.id} className="inline-flex items-center gap-2 rounded-full border border-sun-soft bg-white py-1 pr-3.5 pl-1 text-[0.84rem]">
-                                  <PersonTile name={p.name} size={24} />
+                                <li key={p.id} className="inline-flex items-center gap-2 rounded-full border border-sun-soft bg-white px-3.5 py-1.5 text-[0.84rem]">
                                   {p.name}
                                   <b className="font-semibold tabular">{formatMoney(shares.get(p.id)!, cur)}</b>
                                 </li>
                               ))}
                           </ul>
                           <div className="mt-3 flex gap-2">
-                            <Button variant="soft" icon={<LuPencil className="size-4" aria-hidden />} className="h-9 px-4 text-[0.84rem]" onClick={() => openSheet(e)}>
+                            <Button variant="soft" className="h-9 px-4 text-[0.84rem]" onClick={() => openSheet(e)}>
                               Düzəlt
                             </Button>
-                            <Button variant="ghost" icon={<LuTrash2 className="size-4" aria-hidden />} className="h-9 px-3 text-[0.84rem] text-owe hover:bg-owe/10 hover:text-owe" onClick={() => setToDelete(e)}>
+                            <Button variant="ghost" className="h-9 px-3 text-[0.84rem] text-owe hover:bg-owe/10 hover:text-owe" onClick={() => setToDelete(e)}>
                               Sil
                             </Button>
                           </div>

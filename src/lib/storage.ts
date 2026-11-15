@@ -1,5 +1,5 @@
 import { addDays, isISO, todayISO } from "./dates";
-import { sampleTrip } from "./sample";
+import { sampleTrip, upcomingTrip } from "./sample";
 import { CATEGORIES, type Trip } from "./types";
 
 /**
@@ -16,7 +16,7 @@ export interface Saved {
 
 export type LoadResult = { ok: true; state: Saved } | { ok: false };
 
-const fresh = (): Saved => ({ trips: [sampleTrip()] });
+const fresh = (): Saved => ({ trips: [upcomingTrip(), sampleTrip()] });
 
 export function loadState(): LoadResult {
   let raw: string | null = null;

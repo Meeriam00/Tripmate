@@ -24,17 +24,29 @@ This version is not a dashboard. There are no stat cards, no charts and no admin
 
 ## Design
 
-The design follows the Pinterest reference (a warm budget-tracker app), translated into a desktop-first website:
+The starting point was the orange expense-tracker reference. It is developed into an art-directed, desktop-first website with the feel of a travel journal rather than a dashboard.
 
-- **Palette:** a cream page (`#FDF0DC`), sunny orange (`#FBB54C`) as the one accent, near-black text and soft greys. Green and red appear only on money owed or received.
-- **Type:** Poppins throughout, bold and tight for headings.
-- **Elements from the reference:** the orange summary pill (*Ümumi xərc | Adambaşı*), orange-rimmed icon tiles, section headers underlined in orange, and a round orange "+" for adding.
+- **Palette:** a cream page (`#FDF0DC`) and sunny orange (`#FBB54C`) as the single accent, with near-black ink. Green and red appear only on money owed or received.
+- **Type:** Lora (a serif) for headings, trip names and the written summary, paired with Poppins for the interface and all figures.
+- **Illustration:**
+  - Every trip gets an original vintage-poster scene drawn in SVG: mountains, sea, city or dunes, picked from the destination (Qəbələ → mountains, Nabran → sea, İstanbul → city).
+  - The scene appears on a tilted postcard on the home page and in the trip header.
+  - No stock photography and no generated imagery.
+- **Texture and graphic devices:**
+  - A subtle paper grain and dotted backgrounds.
+  - A dashed flight route with a plane, which doubles as the budget progress line.
+  - Ink "stamps" for trip status (*Qarşıda / Yoldayıq / Bitib*) and for paid transfers (*Ödənilib*).
+- **Icons:** icons are used only where they are clearer than words: expense categories, an undo arrow and a close cross.
+  - Those icons carry a tooltip and an accessible label.
+  - Important actions are text buttons with no decorative icon: *Yeni səfər yarat*, *Xərc əlavə et*, *Ödənildi*, *CSV yüklə*.
 - **Layout:**
-  - Top navigation and a 1200px content width.
-  - The trip header holds the name, dates, people and summary pill, with underline tabs below it.
+  - A 1200px content width with top navigation.
+  - The trip header holds the name, dates, people, summary pill and postcard, with underline tabs below it.
   - Wide tables on desktop, which collapse into readable rows on phones.
-  - Designed for 1440px first, then checked at 1024, 768 and 390px.
-- **Micro-interactions:** cards lift on hover, row actions appear on hover, the payment progress bar animates, and forms open as a bottom sheet on phones. `prefers-reduced-motion` is respected.
+- **Motion:**
+  - Postcards zoom gently on hover, and row actions appear on hover.
+  - A stamp lands when a payment is marked.
+  - `prefers-reduced-motion` is respected.
 
 ## How the maths works
 
@@ -62,7 +74,7 @@ All logic is in `src/lib/` as small, pure, unit-tested functions. Components con
   - Payments never double-counting, and marking every transfer paid settles the trip.
   - Dates in Azerbaijani, and the CSV report.
   - Settlement **optimality checked against a brute-force solver** on hundreds of random groups.
-- **59 browser checks** (Playwright/Chromium), run at **1440, 1024, 768 and 390px**:
+- **62 browser checks** (Playwright/Chromium), run at **1440, 1280, 1024, 768 and 390px**:
   - Create a trip with five friends, with validation; switch between trips.
   - Equal, selected-participant and custom splits; filters, search, sorting and expanded shares.
   - Editing and deleting with confirmation; balances against hand-calculated values.
@@ -71,7 +83,7 @@ All logic is in `src/lib/` as small, pure, unit-tested functions. Components con
   - Refresh persistence, and migration of data saved by the previous version.
   - Welcome, not-found and corrupt-data screens.
   - No horizontal overflow and no console errors.
-  - An automated scan of **~450 interface strings** (text, labels, placeholders, options) for English.
+  - An automated scan of **~480 interface strings** (text, labels, placeholders, options) for English.
 
 ## Technical notes
 

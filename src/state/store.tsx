@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useReducer, useRef, useState, type ReactNode } from "react";
-import { sampleTrip } from "../lib/sample";
+import { sampleTrip, upcomingTrip } from "../lib/sample";
 import { loadState, saveState, STORAGE_KEY, uid, type Saved } from "../lib/storage";
 import type { Activity, Expense, ID, Payment, Trip } from "../lib/types";
 
@@ -108,7 +108,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const startFresh = useCallback(() => {
     canSave.current = true;
     setLoadFailed(false);
-    dispatch({ type: "replace", state: { trips: [sampleTrip()] } });
+    dispatch({ type: "replace", state: { trips: [upcomingTrip(), sampleTrip()] } });
   }, []);
 
   const getTrip = useCallback((id: ID) => state.trips.find((t) => t.id === id), [state.trips]);

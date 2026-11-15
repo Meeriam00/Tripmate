@@ -2,6 +2,8 @@
 
 @theme {
   --font-sans: "Poppins", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  /* Editorial serif for trip names, big headlines and quiet asides. */
+  --font-serif: "Lora", Georgia, "Times New Roman", serif;
 
   /* Palette taken from the reference: cream, sunny orange, near-black, soft greys. */
   --color-cream: #fdf0dc;
@@ -130,4 +132,70 @@
   [role="region"] {
     display: none !important;
   }
+}
+
+/* ---------- Paper grain: a quiet texture on cream sections */
+.grain {
+  position: relative;
+  isolation: isolate;
+}
+.grain::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0.55;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .42 0 0 0 0 .28 0 0 0 0 .08 0 0 0 .10 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* A faint dotted grid used behind the trips section */
+.dots {
+  background-image: radial-gradient(rgb(245 165 45 / 0.22) 1.2px, transparent 1.4px);
+  background-size: 22px 22px;
+}
+
+/* ---------- Tooltips for icon-only controls */
+[data-tip] {
+  position: relative;
+}
+[data-tip]:hover::after,
+[data-tip]:focus-visible::after {
+  content: attr(data-tip);
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 60;
+  padding: 5px 10px;
+  border-radius: 8px;
+  background: #1b1b1b;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.3;
+  white-space: nowrap;
+  pointer-events: none;
+  animation: tip-in 140ms ease-out;
+}
+@keyframes tip-in {
+  from { opacity: 0; transform: translate(-50%, 3px); }
+}
+
+/* ---------- Postcards: a white border, a soft shadow, a little tilt */
+.postcard {
+  background: #fff;
+  padding: 10px 10px 34px;
+  border-radius: 6px;
+  box-shadow: 0 1px 2px rgb(80 50 10 / 0.08), 0 18px 40px -18px rgb(80 50 10 / 0.45);
+}
+
+/* A stamp lands once, when a payment is marked as paid */
+@keyframes stamp-in {
+  0% { opacity: 0; transform: scale(1.6) rotate(-14deg); }
+  70% { opacity: 1; transform: scale(0.94) rotate(-6deg); }
+  100% { transform: scale(1) rotate(-6deg); }
+}
+.stamp-in {
+  animation: stamp-in 380ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
 }
