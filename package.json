@@ -3,7 +3,7 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
-  "description": "TRIPMATE: səyahət xərclərini dostlarla asan bölüşün.",
+  "description": "TRIPMATE: səfər xərclərini dostlarla asan bölüşün.",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
