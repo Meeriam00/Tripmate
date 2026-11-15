@@ -1,14 +1,13 @@
 import type { Category } from "./types";
 
-/** Category names (Azerbaijani) and chart colours drawn from the brand palette. */
-export const CATEGORY: Record<Category, { label: string; color: string }> = {
-  food: { label: "Yemək", color: "#FBB54C" },
-  stay: { label: "Yaşayış", color: "#1B1B1B" },
-  transport: { label: "Nəqliyyat", color: "#E07B39" },
-  fun: { label: "Əyləncə", color: "#8C8C8C" },
-  shopping: { label: "Alış-veriş", color: "#F7D59B" },
-  other: { label: "Digər", color: "#D9D2C5" },
+/** Expense categories — Azerbaijani labels and a palette drawn from the brand. */
+export const CATEGORY: Record<Category, { label: string; short: string; color: string; tint: string }> = {
+  stay: { label: "Qalacaq yer", short: "Qalacaq yer", color: "#8B5CF6", tint: "#EFE7FF" },
+  food: { label: "Yemək və içki", short: "Yemək", color: "#FF8A3D", tint: "#FFEBDB" },
+  transport: { label: "Nəqliyyat", short: "Nəqliyyat", color: "#3B9CE8", tint: "#E1F0FC" },
+  fun: { label: "Əyləncə və fəaliyyətlər", short: "Əyləncə", color: "#EC4899", tint: "#FDE4F1" },
+  shopping: { label: "Alış-veriş", short: "Alış-veriş", color: "#14B88A", tint: "#DDF6EE" },
+  other: { label: "Digər", short: "Digər", color: "#8E8EA3", tint: "#EEEEF3" },
 };
 
-/** Display order in pickers. */
-export const CATEGORY_ORDER: Category[] = ["food", "stay", "transport", "fun", "shopping", "other"];
+export const CATEGORY_ORDER: Category[] = ["stay", "food", "transport", "fun", "shopping", "other"];

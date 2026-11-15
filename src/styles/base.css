@@ -1,0 +1,263 @@
+/* ==========================================================================
+   TRIPMATE design system
+   Direction: soft lavender → peach gradients, white pillowy cards, a fluffy
+   mascot, rounded type (Nunito). Purple = calm, peach = "pay attention".
+   ========================================================================== */
+
+:root {
+  --font: "Nunito", ui-rounded, "SF Pro Rounded", system-ui, -apple-system, "Segoe UI", sans-serif;
+
+  --lav-50: #f7f3ff;
+  --lav-100: #efe7ff;
+  --lav-200: #ddcdfd;
+  --lav-300: #c4abfa;
+  --lav-400: #a586f3;
+  --lav-500: #8b5cf6;
+  --lav-600: #7444e0;
+  --lav-700: #5b31b8;
+
+  --peach-50: #fff6ee;
+  --peach-100: #ffe8d4;
+  --peach-200: #ffd1a8;
+  --peach-300: #ffb574;
+  --peach-500: #ff8a3d;
+  --peach-600: #f0701c;
+
+  --pink-500: #ec4f8f;
+  --mint-100: #dcf7ec;
+  --mint-500: #17b07c;
+  --mint-600: #0e8f63;
+  --rose-100: #ffe4ea;
+  --rose-500: #e5486b;
+  --rose-600: #c9304f;
+  --amber-100: #fff2cf;
+  --amber-600: #b7791f;
+
+  --ink: #262438;
+  --ink-2: #5f5c75;
+  --ink-3: #9a97ad;
+  --line: #ecebf3;
+  --line-2: #e0def0;
+  --bg: #fbfaff;
+  --surface: #ffffff;
+  --surface-2: #f5f4fa;
+  --surface-3: #efeef6;
+  --hero-a: #ece2ff;
+  --hero-b: #fdfbff;
+  --warm-a: #ffe5cf;
+  --warm-b: #fffaf5;
+
+  --shadow-1: 0 1px 2px rgba(38, 36, 56, 0.04), 0 2px 8px rgba(38, 36, 56, 0.04);
+  --shadow-2: 0 2px 6px rgba(38, 36, 56, 0.04), 0 12px 32px rgba(76, 52, 140, 0.08);
+  --shadow-3: 0 24px 64px rgba(76, 52, 140, 0.18);
+  --ring: 0 0 0 4px rgba(139, 92, 246, 0.18);
+
+  --r-sm: 12px;
+  --r-md: 18px;
+  --r-lg: 26px;
+  --r-xl: 34px;
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  --bottom-nav: 76px;
+  color-scheme: light;
+}
+
+[data-theme="dark"] {
+  --ink: #f2f0fa;
+  --ink-2: #bcb8d2;
+  --ink-3: #85829c;
+  --line: #2c2a3d;
+  --line-2: #37344b;
+  --bg: #12111b;
+  --surface: #1c1a29;
+  --surface-2: #232133;
+  --surface-3: #2a283c;
+  --lav-50: #221d36;
+  --lav-100: #2a2342;
+  --lav-200: #3b3060;
+  --peach-50: #2e2119;
+  --peach-100: #3b2a1e;
+  --mint-100: #13342a;
+  --rose-100: #3a1c26;
+  --amber-100: #3a3018;
+  --hero-a: #2a2147;
+  --hero-b: #15131f;
+  --warm-a: #3a2618;
+  --warm-b: #17131a;
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-2: 0 10px 30px rgba(0, 0, 0, 0.35);
+  --shadow-3: 0 24px 64px rgba(0, 0, 0, 0.5);
+  color-scheme: dark;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+html {
+  -webkit-text-size-adjust: 100%;
+  scroll-behavior: smooth;
+}
+body {
+  overflow-x: clip;
+  margin: 0;
+  font-family: var(--font);
+  font-size: 16px;
+  line-height: 1.5;
+  font-weight: 600;
+  color: var(--ink);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+  font-feature-settings: "tnum" 0;
+}
+h1,
+h2,
+h3,
+h4,
+p {
+  margin: 0;
+}
+h1,
+h2,
+h3 {
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  line-height: 1.12;
+}
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+button {
+  cursor: pointer;
+  background: none;
+  border: 0;
+  padding: 0;
+}
+a {
+  color: inherit;
+  text-decoration: none;
+}
+img {
+  max-width: 100%;
+  display: block;
+}
+::selection {
+  background: var(--lav-200);
+}
+:focus-visible {
+  outline: 3px solid var(--lav-400);
+  outline-offset: 2px;
+  border-radius: 10px;
+}
+.num {
+  font-variant-numeric: tabular-nums;
+}
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+.muted {
+  color: var(--ink-2);
+}
+.faint {
+  color: var(--ink-3);
+}
+.pos {
+  color: var(--mint-600);
+}
+.neg {
+  color: var(--rose-500);
+}
+[data-theme="dark"] .pos {
+  color: #4fd8a4;
+}
+[data-theme="dark"] .neg {
+  color: #ff7b98;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes pop {
+  0% {
+    transform: scale(0.6);
+    opacity: 0;
+  }
+  70% {
+    transform: scale(1.08);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+@keyframes bob {
+  0%,
+  100% {
+    transform: translateY(0) scale(1, 1);
+  }
+  50% {
+    transform: translateY(-6px) scale(1.01, 0.99);
+  }
+}
+@keyframes blink {
+  0%,
+  92%,
+  100% {
+    transform: scaleY(1);
+  }
+  95% {
+    transform: scaleY(0.08);
+  }
+}
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0) rotate(var(--rot, 0deg));
+  }
+  50% {
+    transform: translateY(-10px) rotate(var(--rot, 0deg));
+  }
+}
+@keyframes shimmer {
+  to {
+    background-position: -200% 0;
+  }
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.rise {
+  animation: rise 0.5s var(--ease) both;
+}

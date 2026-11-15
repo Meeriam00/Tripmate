@@ -71,3 +71,9 @@ export function timeAgo(at: number, now = Date.now()): string {
   const dt = new Date(at);
   return `${dt.getDate()} ${MONTHS[dt.getMonth()]}`;
 }
+
+/** Epoch ms → local "YYYY-MM-DD". */
+export function localISO(ms: number): string {
+  const d = new Date(ms);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
